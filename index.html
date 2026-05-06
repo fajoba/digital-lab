@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fady's Digital Lab</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Fady's Digital Lab</h1>
+    <p>A place to practice programming through useful mini-projects.</p>
+  </header>
+
+  <main>
+<!--Mantra generator card -->
+    <section class="card">
+       <h2>OR Mantra Generator</h2>
+       <img id="mantraImage" style="display: none;" width="300" />
+       <p id="mantra">Click the button for today’s mantra.</p>
+       <button onclick="generateMantra()">Generate Mantra</button>
+    </section>
+<!--Urologic Oncology Daily RVU Calculator card -->
+    <section class="card">
+  <h2>Daily Urologic Oncology RVU Calculator</h2>
+
+  <p class="disclaimer">
+    Educational estimate only. Clinic values use simplified assumptions about visit levels and G2211.
+    Cystoscopy assumes 90% generate a separately billable E/M, but no G2211.
+  </p>
+
+  <h3>Clinic</h3>
+
+  <div class="rvu-row">
+    <label for="newVisits">New Visits</label>
+    <input type="number" id="newVisits" value="0" min="0">
+  </div>
+
+  <div class="rvu-row">
+    <label for="followUps">Follow Up Visits</label>
+    <input type="number" id="followUps" value="0" min="0">
+  </div>
+
+  <div class="rvu-row">
+    <label for="cystos">Cystoscopies</label>
+    <input type="number" id="cystos" value="0" min="0">
+  </div>
+
+  <h3>Inpatient</h3>
+
+  <div class="rvu-row">
+    <label for="newConsults">Consults - New</label>
+    <input type="number" id="newConsults" value="0" min="0">
+  </div>
+
+  <div class="rvu-row">
+    <label for="followConsults">Consults - Follow Up</label>
+    <input type="number" id="followConsults" value="0" min="0">
+  </div>
+
+  <h3>Operating Room</h3>
+
+<div class="rvu-row">
+  <label for="turbtSmall">TURBT Small</label>
+  <input type="number" id="turbtSmall" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="turbtMedium">TURBT Medium</label>
+  <input type="number" id="turbtMedium" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="turbtLarge">TURBT Large</label>
+  <input type="number" id="turbtLarge" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="radicalNeph">Radical Nephrectomy</label>
+  <input type="number" id="radicalNeph" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="partialNeph">Partial Nephrectomy</label>
+  <input type="number" id="partialNeph" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="cystectomy">Radical Cystectomy + Ileal Conduit</label>
+  <input type="number" id="cystectomy" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="prostatectomy">Radical Prostatectomy</label>
+  <input type="number" id="prostatectomy" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="nephroureterectomy">Nephroureterectomy</label>
+  <input type="number" id="nephroureterectomy" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="ureteroscopyLaser">Ureteroscopy + Laser Lithotripsy + Stent</label>
+  <input type="number" id="ureteroscopyLaser" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="pcnlSmall">PCNL Small</label>
+  <input type="number" id="pcnlSmall" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="pcnlLarge">PCNL Large</label>
+  <input type="number" id="pcnlLarge" value="0" min="0">
+</div>
+
+<div class="rvu-row">
+  <label for="laserEnucleation">Laser Enucleation of Prostate</label>
+  <input type="number" id="laserEnucleation" value="0" min="0">
+</div>
+  <button onclick="calculateDailyRVUs()">Calculate Daily RVUs</button>
+ 
+  <div id="dailyRVUResult" class="result-box">
+    Enter your case numbers and calculate.
+  </div>
+
+</section>
+
+  </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
