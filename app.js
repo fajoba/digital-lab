@@ -441,4 +441,13 @@ function showCityResults() {
   cityGameStatus.textContent = `${cityGameState.matchupsCompleted} matchups completed. Rankings shown below.`;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 // render();
