@@ -441,4 +441,4 @@ function showCityResults() {
   cityGameStatus.textContent = `${cityGameState.matchupsCompleted} matchups completed. Rankings shown below.`;
 }
 
-render();
+// render();
