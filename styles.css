@@ -82,3 +82,74 @@ button:hover {
 h3 {
   margin-top: 24px;
 }
+
+.city-game-card {
+  grid-column: span 2;
+}
+
+.city-matchup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.city-option {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1rem;
+  background: #fffdf8;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.city-option h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.city-stats {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.city-stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.35rem;
+}
+
+.city-stat-label {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.city-results {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.city-result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  background: #fffdf8;
+}
+
+@media (max-width: 800px) {
+  .city-game-card {
+    grid-column: span 1;
+  }
+
+  .city-matchup {
+    grid-template-columns: 1fr;
+  }
+}
