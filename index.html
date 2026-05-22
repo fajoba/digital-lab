@@ -127,6 +127,49 @@
 
 </section>
 
+<!-- City Fit Game: anonymous head-to-head city comparison -->
+<section class="card city-game-card">
+  <div class="card-header">
+    <div>
+      <h2>City Fit Game</h2>
+      <p class="muted">
+        Choose between anonymous cities based on lifestyle stats. After enough rounds, reveal your current rankings.
+      </p>
+    </div>
+  </div>
+
+  <div class="city-matchup">
+    <div class="city-option">
+      <h3>City A</h3>
+      <div id="city-a-stats" class="city-stats">
+        Click “Start Matchup” to begin.
+      </div>
+      <button id="choose-city-a-btn" type="button" disabled>Choose City A</button>
+    </div>
+
+    <div class="city-option">
+      <h3>City B</h3>
+      <div id="city-b-stats" class="city-stats">
+        Click “Start Matchup” to begin.
+      </div>
+      <button id="choose-city-b-btn" type="button" disabled>Choose City B</button>
+    </div>
+  </div>
+
+  <div class="button-row">
+    <button id="start-city-matchup-btn" type="button">Start Matchup</button>
+    <button id="show-city-results-btn" class="secondary-button" type="button">
+      Show Rankings
+    </button>
+  </div>
+
+  <div id="city-game-status" class="empty-state">
+    No matchups completed yet.
+  </div>
+
+  <div id="city-results" class="city-results hidden"></div>
+</section>
+
   </main>
 
     <script src="app.js"></script>
