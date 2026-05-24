@@ -266,6 +266,7 @@ const cityBStats = document.getElementById("city-b-stats");
 const chooseCityABtn = document.getElementById("choose-city-a-btn");
 const chooseCityBBtn = document.getElementById("choose-city-b-btn");
 const startCityMatchupBtn = document.getElementById("start-city-matchup-btn");
+const resetCityGameBtn = document.getElementById("reset-city-game-btn");
 const showCityResultsBtn = document.getElementById("show-city-results-btn");
 const cityGameStatus = document.getElementById("city-game-status");
 const cityResults = document.getElementById("city-results");
@@ -284,6 +285,10 @@ if (chooseCityBBtn) {
   chooseCityBBtn.addEventListener("click", () => {
     chooseCityWinner("B");
   });
+}
+
+if (resetCityGameBtn) {
+  resetCityGameBtn.addEventListener("click", resetCityGame);
 }
 
 if (showCityResultsBtn) {
@@ -417,6 +422,30 @@ function chooseCityWinner(choice) {
   cityGameStatus.textContent = `${cityGameState.matchupsCompleted} matchups completed. Last choice saved.`;
 
   startCityMatchup();
+}
+
+function resetCityGame() {
+  const shouldReset = confirm("Reset all city rankings and matchup history?");
+
+  if (!shouldReset) {
+    return;
+  }
+
+  cityGameState = createDefaultCityGameState();
+  currentCityMatchup = null;
+  saveCityGameState();
+
+  cityAStats.textContent = "Click “Start Matchup” to begin.";
+  cityBStats.textContent = "Click “Start Matchup” to begin.";
+
+  chooseCityABtn.disabled = true;
+  chooseCityBBtn.disabled = true;
+
+  cityResults.classList.add("hidden");
+  cityResults.innerHTML = "";
+
+  cityGameStatus.className = "empty-state";
+  cityGameStatus.textContent = "Rankings reset. No matchups completed yet.";
 }
 
 function showCityResults() {
