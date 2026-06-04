@@ -53,6 +53,7 @@ const rvuAssumptions = {
   cystectomy: 40.29,             // 51595
   prostatectomy: 27.41,          // 55869
   nephroureterectomy: 24.73,     // 50548
+  cystoscopyUreteralStent: 4.74, // 52332
   ureteroscopyLaser: 7.80,       // 52356
   pcnlSmall: 12.10,              // 50080
   pcnlLarge: 20.39,              // 50081
@@ -82,6 +83,7 @@ function calculateDailyRVUs() {
     getNumber("cystectomy") * rvuAssumptions.cystectomy +
     getNumber("prostatectomy") * rvuAssumptions.prostatectomy +
     getNumber("nephroureterectomy") * rvuAssumptions.nephroureterectomy +
+    getNumber("cystoscopyUreteralStent") * rvuAssumptions.cystoscopyUreteralStent +
     getNumber("ureteroscopyLaser") * rvuAssumptions.ureteroscopyLaser +
     getNumber("pcnlSmall") * rvuAssumptions.pcnlSmall +
     getNumber("pcnlLarge") * rvuAssumptions.pcnlLarge +
