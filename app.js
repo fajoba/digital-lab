@@ -481,4 +481,106 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+const BRAINSPACE_STORAGE_KEY = "brainspace.v1";
+
+let brainspaceItems = loadBrainspaceItems();
+
+const brainspaceNameInput = document.getElementById("brainspace-name");
+const brainspacePercentInput = document.getElementById("brainspace-percent");
+const addBrainspaceItemBtn = document.getElementById("add-brainspace-item-btn");
+const brainspaceTotal = document.getElementById("brainspace-total");
+const brainspaceList = document.getElementById("brainspace-list");
+
+if (addBrainspaceItemBtn) {
+  addBrainspaceItemBtn.addEventListener("click", addBrainspaceItem);
+  renderBrainspace();
+}
+
+function loadBrainspaceItems() {
+  const saved = localStorage.getItem(BRAINSPACE_STORAGE_KEY);
+
+  if (!saved) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return [];
+  }
+}
+
+function saveBrainspaceItems() {
+  localStorage.setItem(BRAINSPACE_STORAGE_KEY, JSON.stringify(brainspaceItems));
+}
+
+function addBrainspaceItem() {
+  const name = brainspaceNameInput.value.trim();
+  const percent = Number(brainspacePercentInput.value) || 0;
+  const currentTotal = getBrainspaceTotal();
+
+  if (!name) {
+    alert("Add something that is taking up brainspace.");
+    return;
+  }
+
+  if (percent <= 0) {
+    alert("Brainspace percent must be greater than 0.");
+    return;
+  }
+
+  if (currentTotal + percent > 100) {
+    alert(`You only have ${100 - currentTotal}% brainspace remaining. Reduce something else first.`);
+    return;
+  }
+
+  brainspaceItems.push({
+    id: `brainspace-${Date.now()}`,
+    name,
+    percent
+  });
+
+  saveBrainspaceItems();
+
+  brainspaceNameInput.value = "";
+  brainspacePercentInput.value = 10;
+
+  renderBrainspace();
+}
+
+function getBrainspaceTotal() {
+  return brainspaceItems.reduce((sum, item) => sum + item.percent, 0);
+}
+
+function renderBrainspace() {
+  if (!brainspaceTotal || !brainspaceList) {
+    return;
+  }
+
+  const total = getBrainspaceTotal();
+  const remaining = 100 - total;
+
+  brainspaceTotal.textContent = `${total}% allocated · ${remaining}% remaining`;
+
+  if (total === 100) {
+    brainspaceTotal.textContent = "100% allocated. Your current mental bandwidth is fully mapped.";
+  }
+
+  brainspaceList.innerHTML = brainspaceItems
+    .map((item) => {
+      return `
+        <div class="brainspace-item">
+          <div class="brainspace-item-topline">
+            <span>${escapeHtml(item.name)}</span>
+            <span>${item.percent}%</span>
+          </div>
+          <div class="brainspace-bar-track">
+            <div class="brainspace-bar-fill" style="width: ${item.percent}%"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
 // render();
