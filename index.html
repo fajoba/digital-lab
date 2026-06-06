@@ -182,8 +182,6 @@
 
   </main>
 
-    <script src="app.js"></script>
-
 <!-- Diamond Dogs movie ranking card -->
  <section class="card movie-ranking-card">
   <div class="card-header">
@@ -224,6 +222,38 @@
   </ol>
 </section>
 
+<!-- Brainspace: mental bandwidth allocation tracker -->
+<section class="card brainspace-card">
+  <div class="card-header">
+    <div>
+      <h2>Brainspace</h2>
+      <p class="muted">
+        Allocate 100% of your mental bandwidth across the things occupying your mind.
+      </p>
+    </div>
+  </div>
+
+  <div class="brainspace-form">
+    <div class="rvu-row">
+      <label for="brainspace-name">What is on your mind?</label>
+      <input id="brainspace-name" type="text" placeholder="e.g., exercise, coding projects, summer plans" />
+    </div>
+
+    <div class="rvu-row">
+      <label for="brainspace-percent">Brainspace %</label>
+      <input id="brainspace-percent" type="number" min="1" max="100" value="10" />
+    </div>
+
+    <button id="add-brainspace-item-btn" type="button">Add Brainspace Item</button>
+  </div>
+
+  <div id="brainspace-total" class="empty-state">
+    0% allocated. Add items until your brainspace totals 100%.
+  </div>
+
+  <div id="brainspace-list" class="brainspace-list"></div>
+</section>
+
 <footer class="site-footer">
   <div class="container">
     <p>Facing any tough decisions? 
@@ -232,11 +262,9 @@
       </a>
     </p> 
   </div>
-
-
-
 </footer>
+
+  <script src="app.js"></script>
+
 </body>
-
-
 </html>
