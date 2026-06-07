@@ -197,3 +197,58 @@ h3 {
     grid-column: span 1;
   }
 }
+
+.brainspace-card {
+  grid-column: span 2;
+}
+
+.brainspace-form {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.brainspace-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.brainspace-item {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: #fffdf8;
+}
+
+.brainspace-item-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+}
+
+.brainspace-bar-track {
+  height: 12px;
+  background: var(--accent-light);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.brainspace-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+@media (max-width: 800px) {
+  .brainspace-card {
+    grid-column: span 1;
+  }
+
+.brainspace-item button {
+  margin-top: 0.75rem;
+}
+ 
+}
