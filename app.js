@@ -481,6 +481,8 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+// BrainSpace 
+
 const BRAINSPACE_STORAGE_KEY = "brainspace.v1";
 
 let brainspaceItems = loadBrainspaceItems();
@@ -494,6 +496,24 @@ const brainspaceList = document.getElementById("brainspace-list");
 if (addBrainspaceItemBtn) {
   addBrainspaceItemBtn.addEventListener("click", addBrainspaceItem);
   renderBrainspace();
+}
+
+if (brainspaceList) {
+  brainspaceList.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+
+    if (!button) {
+      return;
+    }
+
+    const itemId = button.dataset.brainspaceId;
+
+    if (!itemId) {
+      return;
+    }
+
+    removeBrainspaceItem(itemId);
+  });
 }
 
 function loadBrainspaceItems() {
@@ -566,21 +586,36 @@ function renderBrainspace() {
     brainspaceTotal.textContent = "100% allocated. Your current mental bandwidth is fully mapped.";
   }
 
-  brainspaceList.innerHTML = brainspaceItems
-    .map((item) => {
-      return `
-        <div class="brainspace-item">
-          <div class="brainspace-item-topline">
-            <span>${escapeHtml(item.name)}</span>
-            <span>${item.percent}%</span>
-          </div>
-          <div class="brainspace-bar-track">
-            <div class="brainspace-bar-fill" style="width: ${item.percent}%"></div>
-          </div>
+brainspaceList.innerHTML = brainspaceItems
+  .map((item) => {
+    return `
+      <div class="brainspace-item">
+        <div class="brainspace-item-topline">
+          <span>${escapeHtml(item.name)}</span>
+          <span>${item.percent}%</span>
         </div>
-      `;
-    })
-    .join("");
+
+        <div class="brainspace-bar-track">
+          <div class="brainspace-bar-fill" style="width: ${item.percent}%"></div>
+        </div>
+
+        <button
+          class="small-button danger-button"
+          type="button"
+          data-brainspace-id="${item.id}"
+        >
+          Remove
+        </button>
+      </div>
+    `;
+  })
+  .join("");
+}
+
+function removeBrainspaceItem(itemId) {
+  brainspaceItems = brainspaceItems.filter((item) => item.id !== itemId);
+  saveBrainspaceItems();
+  renderBrainspace();
 }
 
 // render();
