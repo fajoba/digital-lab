@@ -83,6 +83,57 @@ h3 {
   margin-top: 24px;
 }
 
+.surgeonstats-card {
+  grid-column: span 2;
+}
+
+.surgeonstats-form {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.surgeonstats-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.surgeonstats-case {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: #fffdf8;
+}
+
+.surgeonstats-case-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 900;
+  margin-bottom: 0.4rem;
+}
+
+.surgeonstats-case-meta {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  .surgeonstats-card {
+    grid-column: span 1;
+  }
+}
+
+.surgeonstats-card ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.surgeonstats-card li {
+  margin-bottom: 0.25rem;
+}
+
 .city-game-card {
   grid-column: span 2;
 }

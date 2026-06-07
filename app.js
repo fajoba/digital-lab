@@ -618,4 +618,166 @@ function removeBrainspaceItem(itemId) {
   renderBrainspace();
 }
 
+const SURGEONSTATS_STORAGE_KEY = "surgeonStats.v1";
+
+let surgeonStatsCases = loadSurgeonStatsCases();
+
+const surgeonStatsDateInput = document.getElementById("surgeonstats-date");
+const surgeonStatsCaseTypeInput = document.getElementById("surgeonstats-case-type");
+const surgeonStatsOpTimeInput = document.getElementById("surgeonstats-op-time");
+const surgeonStatsMarginStatusInput = document.getElementById("surgeonstats-margin-status");
+const addSurgeonStatsCaseBtn = document.getElementById("add-surgeonstats-case-btn");
+const surgeonStatsSummary = document.getElementById("surgeonstats-summary");
+const surgeonStatsList = document.getElementById("surgeonstats-list");
+
+if (addSurgeonStatsCaseBtn) {
+  addSurgeonStatsCaseBtn.addEventListener("click", addSurgeonStatsCase);
+  renderSurgeonStats();
+}
+
+function loadSurgeonStatsCases() {
+  const saved = localStorage.getItem(SURGEONSTATS_STORAGE_KEY);
+
+  if (!saved) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return [];
+  }
+}
+
+function saveSurgeonStatsCases() {
+  localStorage.setItem(SURGEONSTATS_STORAGE_KEY, JSON.stringify(surgeonStatsCases));
+}
+
+function addSurgeonStatsCase() {
+  const date = surgeonStatsDateInput.value;
+  const caseType = surgeonStatsCaseTypeInput.value;
+  const operativeTime = Number(surgeonStatsOpTimeInput.value) || 0;
+  const marginStatus = surgeonStatsMarginStatusInput.value;
+
+  if (!date) {
+    alert("Add a case date.");
+    return;
+  }
+
+  if (!caseType) {
+    alert("Choose a case type.");
+    return;
+  }
+
+  if (operativeTime <= 0) {
+    alert("Add an operative time greater than 0 minutes.");
+    return;
+  }
+
+  if (!marginStatus) {
+    alert("Choose a margin status.");
+    return;
+  }
+
+  surgeonStatsCases.unshift({
+    id: `surgeonstats-${Date.now()}`,
+    date,
+    caseType,
+    operativeTime,
+    marginStatus
+  });
+
+  saveSurgeonStatsCases();
+
+  surgeonStatsDateInput.value = "";
+  surgeonStatsCaseTypeInput.value = "";
+  surgeonStatsOpTimeInput.value = 0;
+  surgeonStatsMarginStatusInput.value = "";
+
+  renderSurgeonStats();
+}
+
+function renderSurgeonStats() {
+  if (!surgeonStatsSummary || !surgeonStatsList) {
+    return;
+  }
+
+  if (!surgeonStatsCases.length) {
+    surgeonStatsSummary.className = "empty-state";
+    surgeonStatsSummary.textContent = "No cases logged yet.";
+    surgeonStatsList.innerHTML = "";
+    return;
+  }
+
+  const totalCases = surgeonStatsCases.length;
+const averageOpTime = surgeonStatsCases.reduce((sum, item) => {
+  return sum + item.operativeTime;
+}, 0) / totalCases;
+
+const marginStatsByCaseType = {};
+
+surgeonStatsCases.forEach((item) => {
+  if (!marginStatsByCaseType[item.caseType]) {
+    marginStatsByCaseType[item.caseType] = {
+      positive: 0,
+      eligible: 0
+    };
+  }
+
+  if (item.marginStatus === "Positive" || item.marginStatus === "Negative") {
+    marginStatsByCaseType[item.caseType].eligible += 1;
+  }
+
+  if (item.marginStatus === "Positive") {
+    marginStatsByCaseType[item.caseType].positive += 1;
+  }
+});
+
+const marginRateHtml = Object.entries(marginStatsByCaseType)
+  .map(([caseType, stats]) => {
+    if (stats.eligible === 0) {
+      return `<li>${escapeHtml(caseType)}: no final margin data yet</li>`;
+    }
+
+    const rate = Math.round((stats.positive / stats.eligible) * 100);
+
+    return `<li>${escapeHtml(caseType)}: ${stats.positive}/${stats.eligible} positive (${rate}%)</li>`;
+  })
+  .join("");
+
+surgeonStatsSummary.className = "result-box";
+surgeonStatsSummary.innerHTML = `
+  <p><strong>${totalCases}</strong> cases logged · <strong>Average op time:</strong> ${averageOpTime.toFixed(0)} min</p>
+  <p><strong>Positive margin rate by case type:</strong></p>
+  <ul>${marginRateHtml}</ul>
+`;
+
+  surgeonStatsList.innerHTML = surgeonStatsCases
+    .map((item) => {
+      return `
+        <div class="surgeonstats-case">
+          <div class="surgeonstats-case-topline">
+            <span>${escapeHtml(item.caseType)}</span>
+            <span>${formatSimpleDate(item.date)}</span>
+          </div>
+
+          <div class="surgeonstats-case-meta">
+            Op time: ${item.operativeTime} min · Margin: ${escapeHtml(item.marginStatus)}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function formatSimpleDate(dateString) {
+  const date = new Date(`${dateString}T00:00:00`);
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
 // render();

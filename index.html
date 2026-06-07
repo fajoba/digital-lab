@@ -131,6 +131,65 @@
   </div>
 
 </section>
+<!-- SurgeonStats v0.1-->
+
+<!-- SurgeonStats: basic personal surgical case log -->
+<section class="card surgeonstats-card">
+  <div class="card-header">
+    <div>
+      <h2>SurgeonStats</h2>
+      <p class="muted">
+        A basic no-PHI surgical case log for tracking case type, operative time, and margin status.
+      </p>
+    </div>
+  </div>
+
+  <div class="surgeonstats-form">
+    <div class="rvu-row">
+      <label for="surgeonstats-date">Date</label>
+      <input id="surgeonstats-date" type="date" />
+    </div>
+
+    <div class="rvu-row">
+      <label for="surgeonstats-case-type">Case Type</label>
+      <select id="surgeonstats-case-type">
+        <option value="">Choose one</option>
+        <option value="Radical prostatectomy">Radical prostatectomy</option>
+        <option value="Partial nephrectomy">Partial nephrectomy</option>
+        <option value="Radical nephrectomy">Radical nephrectomy</option>
+        <option value="Radical cystectomy">Radical cystectomy</option>
+        <option value="Nephroureterectomy">Nephroureterectomy</option>
+        <option value="RPLND">RPLND</option>
+        <option value="Adrenalectomy">Adrenalectomy</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="rvu-row">
+      <label for="surgeonstats-op-time">Operative Time (minutes)</label>
+      <input id="surgeonstats-op-time" type="number" min="0" value="0" />
+    </div>
+
+    <div class="rvu-row">
+      <label for="surgeonstats-margin-status">Margin Status</label>
+      <select id="surgeonstats-margin-status">
+        <option value="">Choose one</option>
+        <option value="Negative">Negative</option>
+        <option value="Positive">Positive</option>
+        <option value="Not applicable">Not applicable</option>
+        <option value="Pending">Pending</option>
+      </select>
+    </div>
+
+    <button id="add-surgeonstats-case-btn" type="button">Add Case</button>
+  </div>
+
+  <div id="surgeonstats-summary" class="empty-state">
+    No cases logged yet.
+  </div>
+
+  <div id="surgeonstats-list" class="surgeonstats-list"></div>
+</section>
 
 <!-- City Fit Game: anonymous head-to-head city comparison -->
 <section class="card city-game-card">
