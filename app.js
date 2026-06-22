@@ -806,28 +806,42 @@ function renderSurgeonStats() {
   }
 
   const totalCases = surgeonStatsCases.length;
-const averageOpTime = surgeonStatsCases.reduce((sum, item) => {
-  return sum + item.operativeTime;
-}, 0) / totalCases;
+  const averageOpTime = surgeonStatsCases.reduce((sum, item) => {
+    return sum + item.operativeTime;
+  }, 0) / totalCases;
 
-const marginStatsByCaseType = {};
+  const marginStatsByCaseType = {};
 
-surgeonStatsCases.forEach((item) => {
-  if (!marginStatsByCaseType[item.caseType]) {
-    marginStatsByCaseType[item.caseType] = {
-      positive: 0,
-      eligible: 0
-    };
-  }
+  surgeonStatsCases.forEach((item) => {
+    if (!marginStatsByCaseType[item.caseType]) {
+      marginStatsByCaseType[item.caseType] = {
+        positive: 0,
+        eligible: 0
+      };
+    }
 
-  if (item.marginStatus === "Positive" || item.marginStatus === "Negative") {
-    marginStatsByCaseType[item.caseType].eligible += 1;
-  }
+    if (item.marginStatus === "Positive" || item.marginStatus === "Negative") {
+      marginStatsByCaseType[item.caseType].eligible += 1;
+    }
 
-  if (item.marginStatus === "Positive") {
-    marginStatsByCaseType[item.caseType].positive += 1;
-  }
-});
+    if (item.marginStatus === "Positive") {
+      marginStatsByCaseType[item.caseType].positive += 1;
+    }
+  });
+
+  const opTimeStatsByCaseType = {};
+
+  surgeonStatsCases.forEach((item) => {
+    if (!opTimeStatsByCaseType[item.caseType]) {
+      opTimeStatsByCaseType[item.caseType] = {
+        totalOpTime: 0,
+        count: 0
+      };
+    }
+
+    opTimeStatsByCaseType[item.caseType].totalOpTime += item.operativeTime;
+    opTimeStatsByCaseType[item.caseType].count += 1;
+  });
 
 const marginRateHtml = Object.entries(marginStatsByCaseType)
   .map(([caseType, stats]) => {
@@ -841,9 +855,24 @@ const marginRateHtml = Object.entries(marginStatsByCaseType)
   })
   .join("");
 
+const opTimeHtml = Object.entries(opTimeStatsByCaseType)
+  .map(([caseType, stats]) => {
+    const averageOpTimeForCaseType = stats.totalOpTime / stats.count;
+
+    return `<li>${escapeHtml(caseType)}: ${averageOpTimeForCaseType.toFixed(0)} min average</li>`;
+  })
+  .join("");
+
 surgeonStatsSummary.className = "result-box";
 surgeonStatsSummary.innerHTML = `
-  <p><strong>${totalCases}</strong> cases logged · <strong>Average op time:</strong> ${averageOpTime.toFixed(0)} min</p>
+  <p>
+    <strong>${totalCases}</strong> cases logged ·
+    <strong>Overall average op time:</strong> ${averageOpTime.toFixed(0)} min
+  </p>
+
+  <p><strong>Average op time by case type:</strong></p>
+  <ul>${opTimeHtml}</ul>
+
   <p><strong>Positive margin rate by case type:</strong></p>
   <ul>${marginRateHtml}</ul>
 `;
