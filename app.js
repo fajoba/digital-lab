@@ -507,12 +507,23 @@ if (brainspaceList) {
     }
 
     const itemId = button.dataset.brainspaceId;
+    const action = button.dataset.brainspaceAction;
 
-    if (!itemId) {
+    if (!itemId || !action) {
       return;
     }
 
-    removeBrainspaceItem(itemId);
+    if (action === "remove") {
+      removeBrainspaceItem(itemId);
+    }
+
+    if (action === "increase") {
+      changeBrainspacePercent(itemId, 5);
+    }
+
+    if (action === "decrease") {
+      changeBrainspacePercent(itemId, -5);
+    }
   });
 }
 
@@ -599,13 +610,34 @@ brainspaceList.innerHTML = brainspaceItems
           <div class="brainspace-bar-fill" style="width: ${item.percent}%"></div>
         </div>
 
+       <div class="brainspace-actions">
         <button
+          class="small-button"
+          type="button"
+          data-brainspace-action="decrease"
+          data-brainspace-id="${item.id}"
+        >
+          -5
+        </button>
+
+        <button
+          class="small-button"
+          type="button"
+          data-brainspace-action="increase"
+          data-brainspace-id="${item.id}"
+        >
+          +5
+        </button>
+
+         <button
           class="small-button danger-button"
           type="button"
+          data-brainspace-action="remove"
           data-brainspace-id="${item.id}"
         >
           Remove
         </button>
+        </div>
       </div>
     `;
   })
@@ -614,6 +646,40 @@ brainspaceList.innerHTML = brainspaceItems
 
 function removeBrainspaceItem(itemId) {
   brainspaceItems = brainspaceItems.filter((item) => item.id !== itemId);
+  saveBrainspaceItems();
+  renderBrainspace();
+}
+
+function changeBrainspacePercent(itemId, amount) {
+  const item = brainspaceItems.find((brainspaceItem) => {
+    return brainspaceItem.id === itemId;
+  });
+
+  if (!item) {
+    return;
+  }
+
+  const currentTotal = getBrainspaceTotal();
+  const newItemPercent = item.percent + amount;
+  const newTotal = currentTotal + amount;
+
+  if (newItemPercent < 0) {
+    return;
+  }
+
+  if (newTotal > 100) {
+    alert("You do not have enough remaining brainspace.");
+    return;
+  }
+
+  item.percent = newItemPercent;
+
+  if (item.percent === 0) {
+    brainspaceItems = brainspaceItems.filter((brainspaceItem) => {
+      return brainspaceItem.id !== itemId;
+    });
+  }
+
   saveBrainspaceItems();
   renderBrainspace();
 }
@@ -633,6 +699,24 @@ const surgeonStatsList = document.getElementById("surgeonstats-list");
 if (addSurgeonStatsCaseBtn) {
   addSurgeonStatsCaseBtn.addEventListener("click", addSurgeonStatsCase);
   renderSurgeonStats();
+}
+
+if (surgeonStatsList) {
+  surgeonStatsList.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+
+    if (!button) {
+      return;
+    }
+
+    const caseId = button.dataset.surgeonstatsId;
+
+    if (!caseId) {
+      return;
+    }
+
+    removeSurgeonStatsCase(caseId);
+  });
 }
 
 function loadSurgeonStatsCases() {
@@ -678,6 +762,18 @@ function addSurgeonStatsCase() {
     alert("Choose a margin status.");
     return;
   }
+
+  function removeSurgeonStatsCase(caseId) {
+  const shouldRemove = confirm("Remove this case from SurgeonStats?");
+
+  if (!shouldRemove) {
+    return;
+  }
+
+  surgeonStatsCases = surgeonStatsCases.filter((item) => item.id !== caseId);
+  saveSurgeonStatsCases();
+  renderSurgeonStats();
+}
 
   surgeonStatsCases.unshift({
     id: `surgeonstats-${Date.now()}`,
@@ -753,21 +849,29 @@ surgeonStatsSummary.innerHTML = `
 `;
 
   surgeonStatsList.innerHTML = surgeonStatsCases
-    .map((item) => {
-      return `
-        <div class="surgeonstats-case">
-          <div class="surgeonstats-case-topline">
-            <span>${escapeHtml(item.caseType)}</span>
-            <span>${formatSimpleDate(item.date)}</span>
-          </div>
-
-          <div class="surgeonstats-case-meta">
-            Op time: ${item.operativeTime} min · Margin: ${escapeHtml(item.marginStatus)}
-          </div>
+  .map((item) => {
+    return `
+      <div class="surgeonstats-case">
+        <div class="surgeonstats-case-topline">
+          <span>${escapeHtml(item.caseType)}</span>
+          <span>${formatSimpleDate(item.date)}</span>
         </div>
-      `;
-    })
-    .join("");
+
+        <div class="surgeonstats-case-meta">
+          Op time: ${item.operativeTime} min · Margin: ${escapeHtml(item.marginStatus)}
+        </div>
+
+        <button
+          class="small-button danger-button"
+          type="button"
+          data-surgeonstats-id="${item.id}"
+        >
+          Remove
+        </button>
+      </div>
+    `;
+  })
+  .join("");
 }
 
 function formatSimpleDate(dateString) {

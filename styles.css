@@ -134,6 +134,10 @@ h3 {
   margin-bottom: 0.25rem;
 }
 
+.surgeonstats-case button {
+  margin-top: 0.75rem;
+}
+
 .city-game-card {
   grid-column: span 2;
 }
@@ -302,4 +306,11 @@ h3 {
   margin-top: 0.75rem;
 }
  
+}
+
+.brainspace-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
 }
