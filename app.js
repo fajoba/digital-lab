@@ -694,6 +694,7 @@ const surgeonStatsOpTimeInput = document.getElementById("surgeonstats-op-time");
 const surgeonStatsMarginStatusInput = document.getElementById("surgeonstats-margin-status");
 const addSurgeonStatsCaseBtn = document.getElementById("add-surgeonstats-case-btn");
 const surgeonStatsSummary = document.getElementById("surgeonstats-summary");
+const surgeonStatsDashboard = document.getElementById("surgeonstats-dashboard");
 const surgeonStatsList = document.getElementById("surgeonstats-list");
 
 if (addSurgeonStatsCaseBtn) {
@@ -763,18 +764,6 @@ function addSurgeonStatsCase() {
     return;
   }
 
-  function removeSurgeonStatsCase(caseId) {
-  const shouldRemove = confirm("Remove this case from SurgeonStats?");
-
-  if (!shouldRemove) {
-    return;
-  }
-
-  surgeonStatsCases = surgeonStatsCases.filter((item) => item.id !== caseId);
-  saveSurgeonStatsCases();
-  renderSurgeonStats();
-}
-
   surgeonStatsCases.unshift({
     id: `surgeonstats-${Date.now()}`,
     date,
@@ -793,14 +782,27 @@ function addSurgeonStatsCase() {
   renderSurgeonStats();
 }
 
+function removeSurgeonStatsCase(caseId) {
+  const shouldRemove = confirm("Remove this case from SurgeonStats?");
+
+  if (!shouldRemove) {
+    return;
+  }
+
+  surgeonStatsCases = surgeonStatsCases.filter((item) => item.id !== caseId);
+  saveSurgeonStatsCases();
+  renderSurgeonStats();
+}
+
 function renderSurgeonStats() {
-  if (!surgeonStatsSummary || !surgeonStatsList) {
+  if (!surgeonStatsSummary || !surgeonStatsDashboard || !surgeonStatsList) {
     return;
   }
 
   if (!surgeonStatsCases.length) {
     surgeonStatsSummary.className = "empty-state";
     surgeonStatsSummary.textContent = "No cases logged yet.";
+    surgeonStatsDashboard.innerHTML = "";
     surgeonStatsList.innerHTML = "";
     return;
   }
@@ -810,72 +812,105 @@ function renderSurgeonStats() {
     return sum + item.operativeTime;
   }, 0) / totalCases;
 
-  const marginStatsByCaseType = {};
+  const statsByCaseType = {};
 
   surgeonStatsCases.forEach((item) => {
-    if (!marginStatsByCaseType[item.caseType]) {
-      marginStatsByCaseType[item.caseType] = {
+    if (!statsByCaseType[item.caseType]) {
+      statsByCaseType[item.caseType] = {
+        count: 0,
+        totalOpTime: 0,
         positive: 0,
         eligible: 0
       };
     }
 
+    statsByCaseType[item.caseType].count += 1;
+    statsByCaseType[item.caseType].totalOpTime += item.operativeTime;
+
     if (item.marginStatus === "Positive" || item.marginStatus === "Negative") {
-      marginStatsByCaseType[item.caseType].eligible += 1;
+      statsByCaseType[item.caseType].eligible += 1;
     }
 
     if (item.marginStatus === "Positive") {
-      marginStatsByCaseType[item.caseType].positive += 1;
+      statsByCaseType[item.caseType].positive += 1;
     }
   });
 
-  const opTimeStatsByCaseType = {};
+  const caseCountHtml = Object.entries(statsByCaseType)
+    .map(([caseType, stats]) => {
+      return `
+        <div class="surgeonstats-stat-row">
+          <span>${escapeHtml(caseType)}</span>
+          <strong>${stats.count}</strong>
+        </div>
+      `;
+    })
+    .join("");
 
-  surgeonStatsCases.forEach((item) => {
-    if (!opTimeStatsByCaseType[item.caseType]) {
-      opTimeStatsByCaseType[item.caseType] = {
-        totalOpTime: 0,
-        count: 0
-      };
-    }
+  const opTimeHtml = Object.entries(statsByCaseType)
+    .map(([caseType, stats]) => {
+      const averageOpTimeForCaseType = stats.totalOpTime / stats.count;
 
-    opTimeStatsByCaseType[item.caseType].totalOpTime += item.operativeTime;
-    opTimeStatsByCaseType[item.caseType].count += 1;
-  });
+      return `
+        <div class="surgeonstats-stat-row">
+          <span>${escapeHtml(caseType)}</span>
+          <strong>${averageOpTimeForCaseType.toFixed(0)} min</strong>
+        </div>
+      `;
+    })
+    .join("");
 
-const marginRateHtml = Object.entries(marginStatsByCaseType)
-  .map(([caseType, stats]) => {
-    if (stats.eligible === 0) {
-      return `<li>${escapeHtml(caseType)}: no final margin data yet</li>`;
-    }
+  const marginRateHtml = Object.entries(statsByCaseType)
+    .map(([caseType, stats]) => {
+      let marginText = "No final margin data yet";
 
-    const rate = Math.round((stats.positive / stats.eligible) * 100);
+      if (stats.eligible > 0) {
+        const rate = Math.round((stats.positive / stats.eligible) * 100);
+        marginText = `${stats.positive}/${stats.eligible} positive (${rate}%)`;
+      }
 
-    return `<li>${escapeHtml(caseType)}: ${stats.positive}/${stats.eligible} positive (${rate}%)</li>`;
-  })
-  .join("");
+      return `
+        <div class="surgeonstats-stat-row">
+          <span>${escapeHtml(caseType)}</span>
+          <strong>${marginText}</strong>
+        </div>
+      `;
+    })
+    .join("");
 
-const opTimeHtml = Object.entries(opTimeStatsByCaseType)
-  .map(([caseType, stats]) => {
-    const averageOpTimeForCaseType = stats.totalOpTime / stats.count;
+  surgeonStatsSummary.className = "result-box";
+  surgeonStatsSummary.innerHTML = `
+    <div class="surgeonstats-metric-grid">
+      <div class="surgeonstats-metric">
+        <div class="surgeonstats-metric-label">Total cases</div>
+        <div class="surgeonstats-metric-value">${totalCases}</div>
+      </div>
 
-    return `<li>${escapeHtml(caseType)}: ${averageOpTimeForCaseType.toFixed(0)} min average</li>`;
-  })
-  .join("");
+      <div class="surgeonstats-metric">
+        <div class="surgeonstats-metric-label">Overall average op time</div>
+        <div class="surgeonstats-metric-value">${averageOpTime.toFixed(0)} min</div>
+      </div>
+    </div>
+  `;
 
-surgeonStatsSummary.className = "result-box";
-surgeonStatsSummary.innerHTML = `
-  <p>
-    <strong>${totalCases}</strong> cases logged ·
-    <strong>Overall average op time:</strong> ${averageOpTime.toFixed(0)} min
-  </p>
+  surgeonStatsDashboard.innerHTML = `
+    <div class="surgeonstats-analytics-grid">
+      <div class="surgeonstats-analytics-panel">
+        <h3>Case Count by Type</h3>
+        ${caseCountHtml}
+      </div>
 
-  <p><strong>Average op time by case type:</strong></p>
-  <ul>${opTimeHtml}</ul>
+      <div class="surgeonstats-analytics-panel">
+        <h3>Average Op Time by Type</h3>
+        ${opTimeHtml}
+      </div>
 
-  <p><strong>Positive margin rate by case type:</strong></p>
-  <ul>${marginRateHtml}</ul>
-`;
+      <div class="surgeonstats-analytics-panel">
+        <h3>Positive Margin Rate by Type</h3>
+        ${marginRateHtml}
+      </div>
+    </div>
+  `;
 
   surgeonStatsList.innerHTML = surgeonStatsCases
   .map((item) => {
