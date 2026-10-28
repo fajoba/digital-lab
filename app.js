@@ -50,6 +50,7 @@ const rvuAssumptions = {
   turbtLarge: 7.31,              // 52240
   radicalNeph: 24.43,            // 50545
   partialNeph: 26.72,            // 50543
+  roboticPyeloplasty: 22.79,     // 50544; 2026 work RVU
   cystectomy: 40.29,             // 51595
   prostatectomy: 27.41,          // 55869
   nephroureterectomy: 24.73,     // 50548
@@ -80,6 +81,7 @@ function calculateDailyRVUs() {
     getNumber("turbtLarge") * rvuAssumptions.turbtLarge +
     getNumber("radicalNeph") * rvuAssumptions.radicalNeph +
     getNumber("partialNeph") * rvuAssumptions.partialNeph +
+    getNumber("roboticPyeloplasty") * rvuAssumptions.roboticPyeloplasty +
     getNumber("cystectomy") * rvuAssumptions.cystectomy +
     getNumber("prostatectomy") * rvuAssumptions.prostatectomy +
     getNumber("nephroureterectomy") * rvuAssumptions.nephroureterectomy +
