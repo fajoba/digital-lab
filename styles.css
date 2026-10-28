@@ -6,6 +6,11 @@
   --text: #222;
 }
 
+header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
 body {
   font-family: Arial, sans-serif;
   background: #f4f1ec;
@@ -14,9 +19,19 @@ body {
   padding: 40px;
 }
 
-header {
-  text-align: center;
-  margin-bottom: 40px;
+body.dark-mode {
+  background-color: #171923;
+  color: #f7fafc;
+}
+
+#theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 h1 {
@@ -390,4 +405,32 @@ h3 {
   gap: 0.5rem;
   margin-top: 0.75rem;
   flex-wrap: wrap;
+}
+
+body.dark-mode .card {
+  background-color: #2d3748;
+  color: #f7fafc;
+}
+
+body.dark-mode input,
+body.dark-mode select {
+  background-color: #1a202c;
+  color: #f7fafc;
+  border: 1px solid #718096;
+}
+
+body.dark-mode #theme-toggle {
+  background-color: #4a5568;
+  color: white;
+  border: 1px solid #718096;
+}
+
+/* Dark mode: nested cards and result boxes */
+body.dark-mode .card .card,
+body.dark-mode .result,
+body.dark-mode .result-box,
+body.dark-mode .total,
+body.dark-mode .brainspace-item {
+  background-color: #1a202c;
+  color: #f7fafc;
 }
