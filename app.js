@@ -953,7 +953,8 @@ function formatSimpleDate(dateString) {
 const themeButton = document.getElementById("theme-toggle");
 
 themeButton.addEventListener("click", function() {
-  document.body.classList.toggle("dark-mode");
+  const isDarkMode = document.body.classList.toggle("dark-mode");
+  themeButton.textContent = isDarkMode ? "☀️ Light Mode" : "🌙 Dark Mode";
 });
 
 // render();
