@@ -7,8 +7,8 @@
  */
 
 const METRICS = [
-  { key: 'good_weather_days', label: 'Good weather days', short: 'Weather', detail: '60–85°F high · no rain · some sunshine; historical dataset needed', format: n => `${Math.round(n)} days`, higherBetter: true },
-  { key: 'walk_score', label: 'Walkability', short: 'Walkability', detail: 'Principal-city Walk Score proxy; not a metro-wide Walk Score', format: n => Number(n).toFixed(1), higherBetter: true },
+  { key: 'good_weather_days', label: 'Good weather days', short: 'Weather', detail: '2015–2024 annual avg · high 60–85°F · <0.254 mm precip · ≥2h sunshine · city proxy', format: n => `${Number(n).toFixed(1)} days`, higherBetter: true },
+  { key: 'walk_score', label: 'Metro walkability (EPA)', short: 'Walkability', detail: 'EPA 2021 National Walkability Index · population-weighted blocks · 1–20 (not Walk Score)', format: n => Number(n).toFixed(2), higherBetter: true },
   { key: 'annual_growth_pct', label: 'Population growth', short: 'Growth', detail: 'July 2024–July 2025 change, Census Vintage 2025', format: n => `${Number(n).toFixed(2)}%`, higherBetter: true },
   { key: 'median_household_income', label: 'Median household income', short: 'Income', detail: '2024 ACS 1-year median household income (metro)', format: n => `$${Math.round(n).toLocaleString()}`, higherBetter: true },
   { key: 'transit_commute_share_pct', label: 'Public transit commuting', short: 'Transit', detail: '2024 ACS: percentage of commuters using public transit', format: n => `${Number(n).toFixed(1)}%`, higherBetter: true },
@@ -171,17 +171,25 @@ function render() {
   const growthCount = getCoverage(metros, 'annual_growth_pct');
   const officialGrowth = growthCount === 100 && state.growthSource === 'census-2025';
   const customGrowth = growthCount === 100 && !officialGrowth;
-  $('data-mode-label').textContent = officialGrowth
-    ? 'Census 2025 growth + population; 2026 sports'
-    : customGrowth ? 'User-imported growth; official population + sports' : 'Official population + 2026 sports';
-  $('mode-title').textContent = officialGrowth
-    ? 'Official Census growth data loaded'
-    : customGrowth ? 'Custom growth scores loaded — verify source' : 'Real-data mode — population and major sports ready';
-  $('mode-description').textContent = officialGrowth
-    ? 'Growth and population: U.S. Census Vintage 2025. Sports: 2026 major-league venues. Other criteria unlock only after complete data are imported.'
-    : customGrowth
-      ? 'The growth column came from an uploaded metrics file, not the verified Census importer. Its origin has not been checked; import the official Census CSV to replace it.'
-      : 'Population and major-league sports use real data. To enable population growth, import the official Census 2025 CSV below, or add it to your website project. No simulated scores are used.';
+  const realExtra = [
+    ['good_weather_days', 'historical weather'],
+    ['walk_score', 'EPA walkability']
+  ].filter(([key]) => getCoverage(metros, key) === 100).map(([,name]) => name);
+  $('data-mode-label').textContent = ['Census 2025 population', '2026 sports',
+    ...(officialGrowth ? ['Census growth'] : []), ...realExtra].join(' · ');
+  $('mode-title').textContent = realExtra.length
+    ? `${realExtra.join(' + ')} ready`
+    : officialGrowth ? 'Official Census growth data loaded'
+    : customGrowth ? 'Custom growth data loaded — check provenance'
+    : 'Real-data mode — population and major sports ready';
+  $('mode-description').textContent = [
+    officialGrowth ? 'Official 2024–2025 metro population growth is loaded.' :
+    customGrowth ? 'Growth values came from a custom CSV, not the official Census importer.' :
+      'Download and import the official Census CSV to enable population growth.',
+    realExtra.length ? `Also loaded: ${realExtra.join(' and ')}.` :
+      'Use the real-data generator to build the weather and walkability CSVs.',
+    'Other criteria activate only after 100 verified metro records are available.'
+  ].join(' ');
   const eliminated = getEliminations(metros);
   const survivors = metros.filter(m => eliminated.get(m.rank).length === 0);
   const excluded = metros.filter(m => eliminated.get(m.rank).length !== 0);
@@ -381,6 +389,22 @@ function main() {
       render();
     })
     .catch(() => { /* Still works with just population/sports or manual file upload. */ });
+  // Extra, independently sourced metric CSVs are optional. Deploy them once
+  // alongside this page; they then activate for every site visitor.
+  for (const filename of ['city-good-weather-days.csv', 'city-walkability.csv']) {
+    fetch(filename, { cache: 'no-cache' })
+      .then(response => {
+        if (!response.ok) throw new Error('Optional CSV not deployed');
+        return response.text();
+      })
+      .then(text => {
+        const values = parseImportedMetrics(text);
+        if (Object.keys(values).length !== BASE_METROS.length) throw new Error('Dataset must contain exactly 100 metros');
+        state.imported = mergeMetrics(state.imported, values);
+        render();
+      })
+      .catch(error => { console.info(filename + ': not loaded (' + error.message + ')'); });
+  }
   render();
 }
 main();

@@ -42,6 +42,7 @@
         <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/metro/totals/cbsa-est2025-alldata.csv" class="button ghost" target="_blank" rel="noopener noreferrer" download="cbsa-est2025-alldata.csv">1 · Download Census CSV</a>
         <label for="census-file" class="button secondary">2 · Import Census CSV</label>
         <input id="census-file" class="sr-only" type="file" accept=".csv,text/csv" />
+        <a class="button ghost" href="metrics-generator.html">Build real weather + walkability data</a>
         <label for="csv-file" class="button secondary">Other metrics CSV</label>
         <input id="csv-file" class="sr-only" type="file" accept=".csv,text/csv" />
       </div>
@@ -61,7 +62,7 @@
         </div>
         <div class="panel-footnote">
           <strong>About the data</strong>
-          <p>Real now: 2025 population and 2026 major-league sports (including temporary Athletics home games in West Sacramento). To unlock growth, download the official Census CSV and import it. To publish growth for <em>all visitors</em>, place that CSV in your Digital Lab folder as <code>census-metro-2025.csv</code>, then commit and push. Weather, walkability, income, transit, university and arts metrics remain disabled until complete, verified datasets are available.</p>
+          <p>Real now: 2025 population and 2026 major-league sports (including temporary Athletics home games in West Sacramento). To unlock growth, download the official Census CSV and import it. To publish growth for <em>all visitors</em>, place that CSV in your Digital Lab folder as <code>census-metro-2025.csv</code>, then commit and push. Weather and walkability can now be generated from Open-Meteo and EPA using the <a href="metrics-generator.html">real-data generator</a>. Download the two generated CSVs, place them alongside <code>city-game.html</code>, and commit/push; all visitors will automatically see the scores. Income, transit, university and arts metrics still require their own verified datasets.</p>
           <a href="metrics-template.csv" download>Download the metrics template ↓</a>
         </div>
       </section>
@@ -91,7 +92,7 @@
     </main>
     <footer class="site-footer">
       <p>Built for coding practice in Digital Lab. This is a filtering experiment, not an objective ranking of places to live.</p>
-      <p>Sources: <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Vintage 2025</a> · <a href="https://www.mlssoccer.com/about/competition-guidelines" target="_blank" rel="noopener noreferrer">MLS</a> · <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB</a> · <a href="https://www.nfl.com/teams/" target="_blank" rel="noopener noreferrer">NFL</a> · <a href="https://www.wnba.com/" target="_blank" rel="noopener noreferrer">WNBA</a>. Other league directories in README.</p>
+      <p>Weather: Open-Meteo ERA5-Land (2015–2024), representative-city proxy; walkability: EPA 2021 National Walkability Index, metro population-weighted across census block groups. These historical metrics do not use 2025 metro geographic definitions. Sources: <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · <a href="https://www.epa.gov/smartgrowth/smart-location-mapping" target="_blank" rel="noopener noreferrer">EPA National Walkability Index</a> · <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Vintage 2025</a> · <a href="https://www.mlssoccer.com/about/competition-guidelines" target="_blank" rel="noopener noreferrer">MLS</a> · <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB</a> · <a href="https://www.nfl.com/teams/" target="_blank" rel="noopener noreferrer">NFL</a> · <a href="https://www.wnba.com/" target="_blank" rel="noopener noreferrer">WNBA</a>. Other league directories in README.</p>
     </footer>
   </div>
 </body>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>City Eliminator · Build real metro data</title>
+  <style>
+    :root{color-scheme:dark;font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#101924;color:#f2f5fa}
+    *{box-sizing:border-box} body{margin:0 auto;max-width:880px;padding:35px 22px 80px}
+    a{color:#93c5fd}h1{font-size:clamp(29px,6vw,45px);line-height:1.12;margin:18px 0}h2{font-size:22px;margin:0 0 7px}
+    .eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:12px;font-weight:700;color:#b4c8e2}
+    .subtitle{color:#bfccd9;max-width:720px}.panel{background:#1c2b3b;border:1px solid #3b5066;border-radius:18px;padding:23px;margin:24px 0}
+    .pill{border-radius:99px;background:#33475e;padding:4px 10px;font-size:13px;color:#dce6f2;white-space:nowrap}
+    .flex{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+    .description{color:#bfd0df;font-size:14px}button{background:#a0d9ff;color:#092039;font-weight:750;border:0;border-radius:9px;padding:12px 16px;cursor:pointer;margin:5px 6px 5px 0}
+    button.secondary{background:#334c66;color:#f4faff}button:disabled{opacity:.43;cursor:not-allowed}input[type=file]{display:block;margin:13px 0;max-width:100%;color:#ddd}progress{display:block;width:100%;height:18px;margin:16px 0}
+    .hint{background:#142333;border-left:3px solid #70b8f4;padding:13px 17px;margin:15px 0;border-radius:5px}.hint p{margin:0 0 7px}.hint p:last-child{margin:0}
+    #log{background:#08111d;border:1px solid #31465b;padding:12px 14px;border-radius:9px;max-height:260px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .error{color:#ffb1b1}.success{color:#8ef0b1}ol{padding-left:25px}code{background:#142333;padding:2px 4px;border-radius:3px}
+  </style>
+  <script defer src="metros.js"></script><script defer src="metro-locations.js"></script><script defer src="metrics-generator.js"></script>
+</head>
+<body>
+  <a href="city-game.html">← Back to City Eliminator</a>
+  <p class="eyebrow">Digital Lab / Source-data workspace</p>
+  <h1>Build the two real-data CSVs</h1>
+  <p class="subtitle">This tool calculates scores from public source data instead of inventing city rankings. Run each section, download its CSV, and add it to your Digital Lab project. Both datasets cover the exact 100 metros in the game.</p>
+
+  <section class="panel" aria-labelledby="weather-heading">
+    <div class="flex"><h2 id="weather-heading">1 · Good-weather days</h2><span class="pill">10 years of daily weather</span></div>
+    <p class="description">Uses <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noopener">Open-Meteo's ERA5-Land reanalysis</a> for 2015–2024 at one representative city per metro. A good day has a high of 60–85°F, less than 0.254 mm (0.01") precipitation, and at least 2 hours of sunshine. The reported score is the 10-year annual average.</p>
+    <div class="hint">Weather is a <strong>representative-city proxy</strong>, not the average across the entire metro. This matters for large/coastal/mountainous metros. The site should disclose this limitation.</div>
+    <progress id="weather-progress" max="100" value="0"></progress><p id="weather-status" aria-live="polite">0/100 metro weather records ready</p>
+    <button id="weather-run" type="button">Generate / resume real weather data</button>
+    <button id="weather-download" type="button" disabled>Download weather CSV</button>
+    <button id="weather-reset" type="button" class="secondary">Clear saved weather</button>
+    <p class="description">Open-Meteo offers no-key access for noncommercial use; results are cached in your browser so you can retry incomplete requests. These calculations require an internet connection.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="walk-heading">
+    <div class="flex"><h2 id="walk-heading">2 · Metro walkability</h2><span class="pill">EPA index · 1–20</span></div>
+    <p class="description">Uses the <a href="https://www.epa.gov/smartgrowth/smart-location-mapping" target="_blank" rel="noopener">U.S. EPA Smart Location Database (2021)</a>. The algorithm groups census block groups by their historic metro CBSA and computes a population-weighted average of <code>NatWalkInd</code>, using <code>TotPop</code> as the weight.</p>
+    <div class="hint"><p><strong>One-time source download:</strong> <a href="https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv" target="_blank" rel="noopener">Download the official EPA CSV</a> (large file), then choose it below.</p><p>This is <strong>not Walk Score®</strong>. EPA's index is based on street-network connectivity, land-use mix, and proximity to transit, and reflects older neighborhood data.</p></div>
+    <input id="epa-file" type="file" accept=".csv,text/csv" aria-label="Choose official EPA 2021 CSV" />
+    <button id="epa-run" type="button">Calculate all 100 metro scores</button>
+    <button id="walk-download" type="button" disabled>Download walkability CSV</button>
+    <p class="description" id="epa-status" aria-live="polite">No EPA file processed yet.</p>
+  </section>
+
+  <section class="panel">
+    <h2>3 · Publish the generated data</h2>
+    <ol>
+      <li>Download <code>city-good-weather-days.csv</code> and <code>city-walkability.csv</code> using the buttons above.</li>
+      <li>Move both files into your <code>digital-lab</code> folder alongside <code>city-game.html</code>.</li>
+      <li>Commit and push the two files with GitHub Desktop. Netlify will publish them, and the latest City Eliminator code will load them automatically for everyone.</li>
+    </ol>
+    <p class="description">If an EPA metropolitan area name has changed since 2021, the tool will report an unmatched metro rather than assign the wrong score. See the log for details.</p>
+  </section>
+  <h2>Activity log</h2><div id="log" aria-live="polite">Ready.</div>
+</body>
+</html>
