@@ -420,7 +420,7 @@ body.dark-mode select {
 /* Paste at the BOTTOM of your existing styles.css. */
 .city-link-card {
   padding: 26px;
-  margin: 22px 0;
+  margin: 22px auto;
   border-radius: 14px;
   border: 1px solid #d6c7af;
   background: #fff8ea;

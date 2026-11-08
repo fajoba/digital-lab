@@ -7,6 +7,7 @@
   <title>City Eliminator | Digital Lab</title>
   <link rel="stylesheet" href="city-game.css" />
   <script defer src="metros.js"></script>
+  <script defer src="metro-sports.js"></script>
   <script defer src="city-game.js"></script>
 </head>
 <body>
@@ -19,7 +20,7 @@
         <p class="intro">Start with America's 100 largest metro areas. Decide what matters. Eliminate the bottom performers. See which places survive your standards.</p>
       </div>
       <div class="masthead-aside">
-        <div class="data-status"><span class="status-dot"></span><span id="data-mode-label">Verified population data</span></div>
+        <div class="data-status"><span class="status-dot"></span><span id="data-mode-label">Verified population + sports data</span></div>
         <p>100 metro areas · 2025 Census estimates</p>
       </div>
     </header>
@@ -35,11 +36,13 @@
     <div class="mode-banner" id="mode-banner" role="status">
       <div>
         <strong id="mode-title">Census-based starting list</strong>
-        <p id="mode-description">Population values are real. Additional scores are not bundled yet, so their sliders unlock after a complete dataset is imported. Use practice mode to test the interaction.</p>
+        <p id="mode-description">Population and major-league sports use real data. Import the official Census file to enable the growth slider.</p>
       </div>
       <div class="mode-actions">
-        <button id="demo-button" class="button ghost" type="button">Try practice data</button>
-        <label for="csv-file" class="button secondary">Import metrics CSV</label>
+        <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/metro/totals/cbsa-est2025-alldata.csv" class="button ghost" target="_blank" rel="noopener noreferrer" download="cbsa-est2025-alldata.csv">1 · Download Census CSV</a>
+        <label for="census-file" class="button secondary">2 · Import Census CSV</label>
+        <input id="census-file" class="sr-only" type="file" accept=".csv,text/csv" />
+        <label for="csv-file" class="button secondary">Other metrics CSV</label>
         <input id="csv-file" class="sr-only" type="file" accept=".csv,text/csv" />
       </div>
     </div>
@@ -58,7 +61,7 @@
         </div>
         <div class="panel-footnote">
           <strong>About the data</strong>
-          <p>The original game used weather, walkability, major-league sports, universities, income, growth, transit and arts vibrancy. Scores require consistent definitions and matching metro boundaries. Practice-mode values are deliberately simulated.</p>
+          <p>Real now: 2025 population and 2026 major-league sports (including temporary Athletics home games in West Sacramento). To unlock growth, download the official Census CSV and import it. To publish growth for <em>all visitors</em>, place that CSV in your Digital Lab folder as <code>census-metro-2025.csv</code>, then commit and push. Weather, walkability, income, transit, university and arts metrics remain disabled until complete, verified datasets are available.</p>
           <a href="metrics-template.csv" download>Download the metrics template ↓</a>
         </div>
       </section>
@@ -88,7 +91,7 @@
     </main>
     <footer class="site-footer">
       <p>Built for coding practice in Digital Lab. This is a filtering experiment, not an objective ranking of places to live.</p>
-      <p>Population source: <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Bureau · Vintage 2025</a></p>
+      <p>Sources: <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Vintage 2025</a> · <a href="https://www.mlssoccer.com/about/competition-guidelines" target="_blank" rel="noopener noreferrer">MLS</a> · <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB</a> · <a href="https://www.nfl.com/teams/" target="_blank" rel="noopener noreferrer">NFL</a> · <a href="https://www.wnba.com/" target="_blank" rel="noopener noreferrer">WNBA</a>. Other league directories in README.</p>
     </footer>
   </div>
 </body>

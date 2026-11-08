@@ -1,20 +1,22 @@
 /* City Eliminator — Digital Lab
  * Each slider applies against the original 100 metros, not the surviving subset.
  * Filters are independent; a metro is eliminated if it fails ANY active filter.
- * Only 2025 population is bundled as real data. Other metrics require CSV import.
+ * Population (Census Vintage 2025) and 2026 sports-team presence are real bundled data.
+ * Census growth can be added by loading the Census 2025 public CSV.
+ * Other metrics only unlock when their full 100-metro data are imported.
  */
 
 const METRICS = [
-  { key: 'good_weather_days', label: 'Good weather days', short: 'Weather', detail: '65–85°F high · <1 mm rain · dew point <65°F (prior game)', format: n => `${Math.round(n)} days`, higherBetter: true },
+  { key: 'good_weather_days', label: 'Good weather days', short: 'Weather', detail: '60–85°F high · no rain · some sunshine; historical dataset needed', format: n => `${Math.round(n)} days`, higherBetter: true },
   { key: 'walk_score', label: 'Walkability', short: 'Walkability', detail: 'Principal-city Walk Score proxy; not a metro-wide Walk Score', format: n => Number(n).toFixed(1), higherBetter: true },
-  { key: 'annual_growth_pct', label: 'Population growth', short: 'Growth', detail: '2024–2025 percentage change, Census Vintage 2025', format: n => `${Number(n).toFixed(2)}%`, higherBetter: true },
+  { key: 'annual_growth_pct', label: 'Population growth', short: 'Growth', detail: 'July 2024–July 2025 change, Census Vintage 2025', format: n => `${Number(n).toFixed(2)}%`, higherBetter: true },
   { key: 'median_household_income', label: 'Median household income', short: 'Income', detail: '2024 ACS 1-year median household income (metro)', format: n => `$${Math.round(n).toLocaleString()}`, higherBetter: true },
   { key: 'transit_commute_share_pct', label: 'Public transit commuting', short: 'Transit', detail: '2024 ACS: percentage of commuters using public transit', format: n => `${Number(n).toFixed(1)}%`, higherBetter: true },
   { key: 'arts_vibrancy_rank', label: 'Arts vibrancy', short: 'Arts', detail: 'SMU 2025 Arts Vibrancy ranking — lower rank is better', format: n => `Rank ${Math.round(n)}`, higherBetter: false },
   { key: 'population_2025', label: 'Metro population', short: 'Population', detail: '2025 Census MSA estimate — an extra optional filter', format: n => Math.round(n).toLocaleString(), higherBetter: true }
 ];
 const BINARY = [
-  { key: 'has_major_sports', label: 'Require major-league sports', short: 'No major-league team', detail: 'NFL, NBA, MLB, NHL, MLS or WNBA in the metro' },
+  { key: 'has_major_sports', label: 'Require major-league sports', short: 'No major-league team', detail: '2026 clubs playing home games in metro · NFL / NBA / MLB / NHL / MLS / WNBA' },
   { key: 'has_top_100_university', label: 'Require a top-100 university', short: 'No top-100 university', detail: '2027 U.S. News National Universities, metro campus' }
 ];
 const BASE_METROS = window.CITY_METROS;
@@ -25,31 +27,7 @@ if (!Array.isArray(BASE_METROS) || BASE_METROS.length !== 100) {
 const NUMERIC_KEYS = METRICS.map(m => m.key).filter(k => k !== 'population_2025');
 const BOOLEAN_KEYS = BINARY.map(b => b.key);
 const ALL_EXTRA_KEYS = [...NUMERIC_KEYS, ...BOOLEAN_KEYS];
-const STORE_KEY = 'digital-lab.city-eliminator.v1';
-
-// A simple deterministic function to create reproducible PRACTICE scores.
-// These numbers are invented. They are NOT measurements or rankings of real cities.
-function practiceScore(name, salt) {
-  let h = 2166136261;
-  for (const ch of `${name}:${salt}`) {
-    h ^= ch.charCodeAt(0);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0) / 4294967295;
-}
-function makePracticeMetrics(metro) {
-  const p = key => practiceScore(metro.metro, key);
-  return {
-    good_weather_days: Math.round(65 + 115 * p('weather')),
-    walk_score: Math.round((20 + 65 * p('walk')) * 10) / 10,
-    annual_growth_pct: Math.round((-1.2 + 4.4 * p('growth')) * 100) / 100,
-    median_household_income: Math.round(52000 + 105000 * p('income')),
-    transit_commute_share_pct: Math.round((0.3 + 19 * p('transit')) * 10) / 10,
-    arts_vibrancy_rank: 1 + Math.floor(99 * p('arts')),
-    has_major_sports: p('sports') > 0.65,
-    has_top_100_university: p('university') > 0.6
-  };
-}
+const STORE_KEY = 'digital-lab.city-eliminator.v2';
 
 const state = {
   percentages: Object.fromEntries(METRICS.map(m => [m.key, 0])),
@@ -57,8 +35,8 @@ const state = {
   view: 'survivors',
   query: '',
   sort: 'rank',
-  practice: false,
-  imported: null
+  imported: null,
+  growthSource: null
 };
 
 function saveState() {
@@ -66,8 +44,8 @@ function saveState() {
     localStorage.setItem(STORE_KEY, JSON.stringify({
       percentages: state.percentages,
       required: state.required,
-      practice: state.practice,
-      imported: state.imported
+      imported: state.imported,
+      growthSource: state.growthSource
     }));
   } catch (_) { /* Works without browser storage (private mode / storage unavailable). */ }
 }
@@ -80,8 +58,8 @@ function restoreState() {
       if (Number.isFinite(v)) state.percentages[m.key] = Math.min(100, Math.max(0, 5 * Math.round(v / 5)));
     }
     for (const b of BINARY) state.required[b.key] = saved.required?.[b.key] === true;
-    state.practice = saved.practice === true;
     if (saved.imported && typeof saved.imported === 'object') state.imported = saved.imported;
+    if (['census-2025','custom-csv'].includes(saved.growthSource)) state.growthSource = saved.growthSource;
   } catch (_) { /* A broken old setting should not break the page. */ }
 }
 
@@ -91,7 +69,8 @@ const html = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;',
 function getMetros() {
   return BASE_METROS.map(metro => ({
     ...metro,
-    ...(state.practice ? makePracticeMetrics(metro) : state.imported?.[metro.rank] || {})
+    ...(state.imported?.[metro.rank] || {}),
+    has_major_sports: window.METRO_SPORTS_RANKS.has(metro.rank)
   }));
 }
 function isValid(metro, key) {
@@ -189,16 +168,20 @@ function render() {
     if (!enabled) lock.textContent = `Data required: ${coverage}/100 scored`;
   }
 
-  $('mode-banner').classList.toggle('demo', state.practice);
-  $('data-mode-label').textContent = state.practice ? 'SIMULATED practice scores' : state.imported ? 'Imported metrics + Census population' : 'Verified population data';
-  $('mode-title').textContent = state.practice ? 'PRACTICE MODE · These scores are not real' : state.imported ? 'Imported dataset loaded' : 'Census-based starting list';
-  $('mode-description').textContent = state.practice
-    ? 'All non-population scores and yes/no flags are invented solely to test the interface. Do not draw conclusions about cities from these results.'
-    : state.imported
-      ? 'Sliders activate only when all 100 metros have valid values for that metric. Check the provenance of imported values before treating outcomes as factual.'
-      : 'Population values are real. Other sliders unlock when you import complete data. Try practice mode to see the full interaction.';
-  $('demo-button').textContent = state.practice ? 'Exit practice mode' : 'Try practice data';
-
+  const growthCount = getCoverage(metros, 'annual_growth_pct');
+  const officialGrowth = growthCount === 100 && state.growthSource === 'census-2025';
+  const customGrowth = growthCount === 100 && !officialGrowth;
+  $('data-mode-label').textContent = officialGrowth
+    ? 'Census 2025 growth + population; 2026 sports'
+    : customGrowth ? 'User-imported growth; official population + sports' : 'Official population + 2026 sports';
+  $('mode-title').textContent = officialGrowth
+    ? 'Official Census growth data loaded'
+    : customGrowth ? 'Custom growth scores loaded — verify source' : 'Real-data mode — population and major sports ready';
+  $('mode-description').textContent = officialGrowth
+    ? 'Growth and population: U.S. Census Vintage 2025. Sports: 2026 major-league venues. Other criteria unlock only after complete data are imported.'
+    : customGrowth
+      ? 'The growth column came from an uploaded metrics file, not the verified Census importer. Its origin has not been checked; import the official Census CSV to replace it.'
+      : 'Population and major-league sports use real data. To enable population growth, import the official Census 2025 CSV below, or add it to your website project. No simulated scores are used.';
   const eliminated = getEliminations(metros);
   const survivors = metros.filter(m => eliminated.get(m.rank).length === 0);
   const excluded = metros.filter(m => eliminated.get(m.rank).length !== 0);
@@ -284,6 +267,52 @@ function parseImportedMetrics(text) {
   }
   return byRank;
 }
+// Accepts the raw CSV published by the U.S. Census Bureau, NOT a hand-filled template.
+// Match metro records by their verified 2025 populations, which remain identical
+// in metros.js. County, metropolitan-division and micropolitan rows are excluded.
+function parseCensusGrowth(text) {
+  const rows = parseCSV(text.replace(/^\uFEFF/, ''));
+  if (!rows.length) throw new Error('The Census CSV is empty');
+  const headers = rows[0].map(s => s.trim().toUpperCase());
+  const fields = ['LSAD', 'NAME', 'POPESTIMATE2024', 'POPESTIMATE2025'];
+  for (const field of fields) if (!headers.includes(field)) {
+    throw new Error(`This is not the Census CBSA-EST2025-ALLDATA file (missing ${field})`);
+  }
+  const col = Object.fromEntries(fields.map(f => [f, headers.indexOf(f)]));
+  const byPop = new Map(BASE_METROS.map(m => [m.population_2025, m]));
+  const byRank = {};
+  const matched = new Map();
+  for (const cells of rows.slice(1)) {
+    const lsad = (cells[col.LSAD] || '').trim().toLowerCase();
+    // Official field uses 'Metropolitan Statistical Area'; reject county/division rows.
+    if (!lsad.includes('metropolitan statistical area') || lsad.includes('micropolitan')) continue;
+    const p24 = Number((cells[col.POPESTIMATE2024] || '').replace(/,/g, ''));
+    const p25 = Number((cells[col.POPESTIMATE2025] || '').replace(/,/g, ''));
+    if (!Number.isSafeInteger(p25) || !Number.isSafeInteger(p24) || p24 <= 0) continue;
+    const base = byPop.get(p25);
+    if (!base) continue;
+    // Cross-check that the metro name begins with the correct principal city.
+    const baseCity = base.metro.split('-')[0].split(',')[0].toLowerCase();
+    const censusName = (cells[col.NAME] || '').trim().toLowerCase();
+    if (!censusName.startsWith(baseCity)) continue;
+    if (matched.has(base.rank)) throw new Error(`Duplicate Census row for ${base.metro}`);
+    matched.set(base.rank, censusName);
+    byRank[base.rank] = { annual_growth_pct: Number((((p25 - p24) / p24) * 100).toFixed(5)) };
+  }
+  if (Object.keys(byRank).length !== BASE_METROS.length) {
+    const missing = BASE_METROS.filter(m => !byRank[m.rank]).map(m => m.metro);
+    throw new Error(`Matched ${Object.keys(byRank).length}/100 metros. Missing: ${missing.slice(0, 5).join('; ')}${missing.length > 5 ? '…' : ''}. Check that you downloaded the official Vintage 2025 file.`);
+  }
+  return byRank;
+}
+// Merge new data rather than erasing a previous import (e.g. ACS later).
+function mergeMetrics(a, b) {
+  const result = { ...(a || {}) };
+  for (const [rank, values] of Object.entries(b)) {
+    result[rank] = { ...(result[rank] || {}), ...values };
+  }
+  return result;
+}
 function csvEscape(value) {
   const str=String(value ?? '');
   return /[",\n\r]/.test(str) ? `"${str.replace(/"/g,'""')}"` : str;
@@ -302,7 +331,6 @@ function exportSurvivors() {
 
 function main() {
   restoreState(); createControls();
-  $('demo-button').addEventListener('click', () => { state.practice=!state.practice; render(); });
   $('reset-button').addEventListener('click', () => {
     for (const m of METRICS) state.percentages[m.key]=0;
     for (const b of BINARY) state.required[b.key]=false;
@@ -318,13 +346,41 @@ function main() {
     const file=e.target.files?.[0]; if (!file) return;
     try {
       const imported=parseImportedMetrics(await file.text());
-      state.imported=imported; state.practice=false;
+      state.imported=mergeMetrics(state.imported, imported);
+      if (Object.values(imported).some(values => Number.isFinite(values.annual_growth_pct))) state.growthSource = 'custom-csv';
       render();
       const complete=ALL_EXTRA_KEYS.filter(k => getCoverage(getMetros(),k)===100);
       window.alert(`Imported ${Object.keys(imported).length} metro rows. Fully populated criteria: ${complete.length} of ${ALL_EXTRA_KEYS.length}.`);
     } catch (error) { window.alert(`CSV import failed: ${error.message}`); }
     e.target.value='';
   });
+  $('census-file').addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const growth = parseCensusGrowth(await file.text());
+      state.imported = mergeMetrics(state.imported, growth);
+      state.growthSource = 'census-2025';
+      render();
+      window.alert('Success! Loaded official 2024–2025 population growth for all 100 metros. The growth slider is now active.');
+    } catch (error) {
+      window.alert('Census import failed: ' + error.message);
+    }
+    event.target.value = '';
+  });
+  // Deployers can place Census file in project root once; all site visitors get it.
+  // Using a local path also avoids cross-origin browser restrictions.
+  fetch('census-metro-2025.csv', { cache: 'no-cache' })
+    .then(response => {
+      if (!response.ok) throw new Error('No bundled Census CSV');
+      return response.text();
+    })
+    .then(text => {
+      state.imported = mergeMetrics(state.imported, parseCensusGrowth(text));
+      state.growthSource = 'census-2025';
+      render();
+    })
+    .catch(() => { /* Still works with just population/sports or manual file upload. */ });
   render();
 }
 main();
