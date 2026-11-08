@@ -951,10 +951,29 @@ function formatSimpleDate(dateString) {
 }
 
 const themeButton = document.getElementById("theme-toggle");
+const THEME_STORAGE_KEY = "digital-lab-theme";
+
+function applyTheme(isDarkMode) {
+  document.body.classList.toggle("dark-mode", isDarkMode);
+  themeButton.textContent = isDarkMode ? "☀️ Light Mode" : "🌙 Dark Mode";
+}
+
+try {
+  applyTheme(localStorage.getItem(THEME_STORAGE_KEY) === "dark");
+} catch {
+  // Keep the default theme when browser storage is unavailable.
+  applyTheme(false);
+}
 
 themeButton.addEventListener("click", function() {
-  const isDarkMode = document.body.classList.toggle("dark-mode");
-  themeButton.textContent = isDarkMode ? "☀️ Light Mode" : "🌙 Dark Mode";
+  const isDarkMode = !document.body.classList.contains("dark-mode");
+  applyTheme(isDarkMode);
+
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? "dark" : "light");
+  } catch {
+    // Theme switching still works when the preference cannot be saved.
+  }
 });
 
 // render();

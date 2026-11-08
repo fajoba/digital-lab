@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101a28" />
+  <title>City Eliminator | Digital Lab</title>
+  <link rel="stylesheet" href="city-game.css" />
+  <script defer src="metros.js"></script>
+  <script defer src="city-game.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="masthead">
+      <div>
+        <a class="back-link" href="index.html">← Digital Lab</a>
+        <p class="eyebrow">A DIGITAL LAB EXPERIMENT / 001</p>
+        <h1>City <em>Eliminator.</em></h1>
+        <p class="intro">Start with America's 100 largest metro areas. Decide what matters. Eliminate the bottom performers. See which places survive your standards.</p>
+      </div>
+      <div class="masthead-aside">
+        <div class="data-status"><span class="status-dot"></span><span id="data-mode-label">Verified population data</span></div>
+        <p>100 metro areas · 2025 Census estimates</p>
+      </div>
+    </header>
+
+    <section class="hero-stats" aria-label="Results summary">
+      <div class="stat"><span class="stat-label">Starting field</span><strong id="initial-count">100</strong><span class="stat-caption">Largest U.S. MSAs</span></div>
+      <div class="stat"><span class="stat-label">Still standing</span><strong id="survivor-count">100</strong><span class="stat-caption" id="survivor-percent">100% of starting field</span></div>
+      <div class="stat"><span class="stat-label">Eliminated</span><strong id="eliminated-count">0</strong><span class="stat-caption">By your active filters</span></div>
+      <div class="stat"><span class="stat-label">Criteria active</span><strong id="active-count">0</strong><span class="stat-caption">Out of 9 total</span></div>
+      <div class="survival-track" aria-hidden="true"><div id="survival-fill"></div></div>
+    </section>
+
+    <div class="mode-banner" id="mode-banner" role="status">
+      <div>
+        <strong id="mode-title">Census-based starting list</strong>
+        <p id="mode-description">Population values are real. Additional scores are not bundled yet, so their sliders unlock after a complete dataset is imported. Use practice mode to test the interaction.</p>
+      </div>
+      <div class="mode-actions">
+        <button id="demo-button" class="button ghost" type="button">Try practice data</button>
+        <label for="csv-file" class="button secondary">Import metrics CSV</label>
+        <input id="csv-file" class="sr-only" type="file" accept=".csv,text/csv" />
+      </div>
+    </div>
+
+    <main class="workspace">
+      <section class="filters-panel" aria-labelledby="filters-title">
+        <div class="panel-heading">
+          <div><p class="eyebrow">YOUR RULES</p><h2 id="filters-title">Elimination filters</h2></div>
+          <button id="reset-button" class="link-button" type="button">Reset filters</button>
+        </div>
+        <p class="subhead">A 25% slider removes the bottom 25 <em>of the original 100</em> on that metric. Filters combine: failing any active criterion eliminates a metro.</p>
+        <div id="numeric-filters" class="filter-stack"></div>
+        <div class="binary-section">
+          <p class="eyebrow">YES / NO FILTERS</p>
+          <div id="binary-filters"></div>
+        </div>
+        <div class="panel-footnote">
+          <strong>About the data</strong>
+          <p>The original game used weather, walkability, major-league sports, universities, income, growth, transit and arts vibrancy. Scores require consistent definitions and matching metro boundaries. Practice-mode values are deliberately simulated.</p>
+          <a href="metrics-template.csv" download>Download the metrics template ↓</a>
+        </div>
+      </section>
+
+      <section class="results-panel" aria-labelledby="results-title">
+        <div class="panel-heading results-heading">
+          <div><p class="eyebrow">THE FIELD</p><h2 id="results-title">Remaining metros</h2></div>
+          <button id="export-button" class="button small" type="button">Export survivors ↓</button>
+        </div>
+        <div class="results-toolbar">
+          <div class="tabs" role="group" aria-label="View cities">
+            <button class="tab active" type="button" data-view="survivors" aria-pressed="true">Survivors <span id="survivors-tab-count">100</span></button>
+            <button class="tab" type="button" data-view="eliminated" aria-pressed="false">Eliminated <span id="eliminated-tab-count">0</span></button>
+          </div>
+          <div class="search-sort">
+            <label class="sr-only" for="city-search">Search metro areas</label>
+            <input id="city-search" type="search" placeholder="Search a metro…" />
+            <label class="sr-only" for="sort-metros">Sort cities</label>
+            <select id="sort-metros"><option value="rank">Population rank</option><option value="name">Alphabetically</option></select>
+          </div>
+        </div>
+        <div class="table-head"><span>Metro area</span><span>2025 population</span></div>
+        <ol id="metro-results" class="metro-list" aria-live="polite"></ol>
+        <div id="no-results" class="empty-state" hidden>No cities match these filters. Try easing one of your criteria or clearing the search.</div>
+        <footer class="results-footer"><span id="showing-count">Showing 100 metros</span><span>Based on 2025 MSA population ranks</span></footer>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <p>Built for coding practice in Digital Lab. This is a filtering experiment, not an objective ranking of places to live.</p>
+      <p>Population source: <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Bureau · Vintage 2025</a></p>
+    </footer>
+  </div>
+</body>
+</html>
