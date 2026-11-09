@@ -6,8 +6,6 @@
   <meta name="theme-color" content="#101a28" />
   <title>City Eliminator | Digital Lab</title>
   <link rel="stylesheet" href="city-game.css" />
-  <script defer src="metros.js"></script>
-  <script defer src="metro-sports.js"></script>
   <script defer src="city-game.js"></script>
 </head>
 <body>
@@ -35,16 +33,11 @@
 
     <div class="mode-banner" id="mode-banner" role="status">
       <div>
-        <strong id="mode-title">Census-based starting list</strong>
-        <p id="mode-description">Population and major-league sports use real data. Import the official Census file to enable the growth slider.</p>
+        <strong id="mode-title">Loading master dataset…</strong>
+        <p id="mode-description">Reading city-data-master.csv. Growth, weather, population, and sports can be filtered when their data are complete.</p>
       </div>
       <div class="mode-actions">
-        <a href="https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/metro/totals/cbsa-est2025-alldata.csv" class="button ghost" target="_blank" rel="noopener noreferrer" download="cbsa-est2025-alldata.csv">1 · Download Census CSV</a>
-        <label for="census-file" class="button secondary">2 · Import Census CSV</label>
-        <input id="census-file" class="sr-only" type="file" accept=".csv,text/csv" />
-        <a class="button ghost" href="metrics-generator.html">Build real weather + walkability data</a>
-        <label for="csv-file" class="button secondary">Other metrics CSV</label>
-        <input id="csv-file" class="sr-only" type="file" accept=".csv,text/csv" />
+        <a class="button ghost" href="city-data-master.csv" download>Download dataset ↓</a>
       </div>
     </div>
 
@@ -62,8 +55,8 @@
         </div>
         <div class="panel-footnote">
           <strong>About the data</strong>
-          <p>Real now: 2025 population and 2026 major-league sports (including temporary Athletics home games in West Sacramento). To unlock growth, download the official Census CSV and import it. To publish growth for <em>all visitors</em>, place that CSV in your Digital Lab folder as <code>census-metro-2025.csv</code>, then commit and push. Weather and walkability can now be generated from Open-Meteo and EPA using the <a href="metrics-generator.html">real-data generator</a>. Download the two generated CSVs, place them alongside <code>city-game.html</code>, and commit/push; all visitors will automatically see the scores. Income, transit, university and arts metrics still require their own verified datasets.</p>
-          <a href="metrics-template.csv" download>Download the metrics template ↓</a>
+          <p>Every filter reads <code>city-data-master.csv</code>. Population and growth use Census 2025 estimates; weather days are approximate modeled values (not observed daily counts). Walkability is CityViking's downtown index, currently available for 64 of 100 metros, so that slider stays disabled until coverage is complete. Other criteria are disabled when their columns are incomplete.</p>
+          <a href="city-data-master.csv" download>Download master CSV ↓</a>
         </div>
       </section>
 
@@ -91,8 +84,8 @@
       </section>
     </main>
     <footer class="site-footer">
-      <p>Built for coding practice in Digital Lab. This is a filtering experiment, not an objective ranking of places to live.</p>
-      <p>Weather: Open-Meteo ERA5-Land (2015–2024), representative-city proxy; walkability: EPA 2021 National Walkability Index, metro population-weighted across census block groups. These historical metrics do not use 2025 metro geographic definitions. Sources: <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank" rel="noopener noreferrer">Open-Meteo</a> · <a href="https://www.epa.gov/smartgrowth/smart-location-mapping" target="_blank" rel="noopener noreferrer">EPA National Walkability Index</a> · <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Vintage 2025</a> · <a href="https://www.mlssoccer.com/about/competition-guidelines" target="_blank" rel="noopener noreferrer">MLS</a> · <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB</a> · <a href="https://www.nfl.com/teams/" target="_blank" rel="noopener noreferrer">NFL</a> · <a href="https://www.wnba.com/" target="_blank" rel="noopener noreferrer">WNBA</a>. Other league directories in README.</p>
+      <p>Built for coding practice in Digital Lab. Eliminations depend on the chosen proxies, not an objective ranking of places to live.</p>
+      <p>Sources: <a href="https://www.census.gov/data/datasets/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html" target="_blank" rel="noopener noreferrer">U.S. Census Vintage 2025</a> · <a href="https://cityviking.com/data-studies/most-walkable-us-cities/" target="_blank" rel="noopener noreferrer">CityViking downtown walkability</a> · <a href="https://sunshineatlas.com/data/" target="_blank" rel="noopener noreferrer">Sunshine Atlas climate normals</a>. Weather is a modeled approximation using airport-area proxies, not a directly observed count of good-weather days. Major-league sports is a 2026 home-venue snapshot.</p>
     </footer>
   </div>
 </body>

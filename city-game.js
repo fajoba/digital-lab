@@ -1,410 +1,346 @@
-/* City Eliminator — Digital Lab
- * Each slider applies against the original 100 metros, not the surviving subset.
- * Filters are independent; a metro is eliminated if it fails ANY active filter.
- * Population (Census Vintage 2025) and 2026 sports-team presence are real bundled data.
- * Census growth can be added by loading the Census 2025 public CSV.
- * Other metrics only unlock when their full 100-metro data are imported.
+/* Digital Lab — City Eliminator
+ * Reads one published data file: city-data-master.csv
+ * Every slider ranks all 100 ORIGINAL metros. Filters combine by intersection.
+ * Data preparation and source attribution live outside this browser script.
  */
 
 const METRICS = [
-  { key: 'good_weather_days', label: 'Good weather days', short: 'Weather', detail: '2015–2024 annual avg · high 60–85°F · <0.254 mm precip · ≥2h sunshine · city proxy', format: n => `${Number(n).toFixed(1)} days`, higherBetter: true },
-  { key: 'walk_score', label: 'Metro walkability (EPA)', short: 'Walkability', detail: 'EPA 2021 National Walkability Index · population-weighted blocks · 1–20 (not Walk Score)', format: n => Number(n).toFixed(2), higherBetter: true },
-  { key: 'annual_growth_pct', label: 'Population growth', short: 'Growth', detail: 'July 2024–July 2025 change, Census Vintage 2025', format: n => `${Number(n).toFixed(2)}%`, higherBetter: true },
-  { key: 'median_household_income', label: 'Median household income', short: 'Income', detail: '2024 ACS 1-year median household income (metro)', format: n => `$${Math.round(n).toLocaleString()}`, higherBetter: true },
-  { key: 'transit_commute_share_pct', label: 'Public transit commuting', short: 'Transit', detail: '2024 ACS: percentage of commuters using public transit', format: n => `${Number(n).toFixed(1)}%`, higherBetter: true },
-  { key: 'arts_vibrancy_rank', label: 'Arts vibrancy', short: 'Arts', detail: 'SMU 2025 Arts Vibrancy ranking — lower rank is better', format: n => `Rank ${Math.round(n)}`, higherBetter: false },
-  { key: 'population_2025', label: 'Metro population', short: 'Population', detail: '2025 Census MSA estimate — an extra optional filter', format: n => Math.round(n).toLocaleString(), higherBetter: true }
+  {
+    key: 'good_weather_days_per_year', label: 'Estimated good-weather days', short: 'Weather',
+    detail: 'Modeled days/year · highs 60–85°F, nearly dry, ≥2 hours sunshine · representative airport, not observed daily counts',
+    format: n => `${Math.round(n)} estimated days`, higherBetter: true
+  },
+  {
+    key: 'walkability_score', label: 'Downtown walkability', short: 'Walkability',
+    detail: 'Downtown walkability · unscored metros are retained',
+    format: n => Number(n).toFixed(1), higherBetter: true
+  },
+  {
+    key: 'population_growth_pct_2024_2025', label: 'Population growth', short: 'Growth',
+    detail: 'Metro population change from July 2024 to July 2025 · U.S. Census Bureau',
+    format: n => `${Number(n) >= 0 ? '+' : ''}${Number(n).toFixed(2)}%`, higherBetter: true
+  },
+  {
+    key: 'median_household_income', label: 'Median household income', short: 'Income',
+    detail: 'To be sourced: ACS metro median household income',
+    format: n => `$${Math.round(n).toLocaleString()}`, higherBetter: true
+  },
+  {
+    key: 'transit_commute_pct', label: 'Public transit commuting', short: 'Transit',
+    detail: 'To be sourced: ACS metro commute share',
+    format: n => `${Number(n).toFixed(1)}%`, higherBetter: true
+  },
+  {
+    key: 'arts_vibrancy_score', label: 'Arts vibrancy', short: 'Arts',
+    detail: 'To be sourced: a consistent score where higher means better',
+    format: n => Number(n).toFixed(1), higherBetter: true
+  },
+  {
+    key: 'population_2025', label: 'Metro population', short: 'Population',
+    detail: '2025 U.S. Census metropolitan population estimate',
+    format: n => Math.round(n).toLocaleString(), higherBetter: true
+  }
 ];
+
 const BINARY = [
-  { key: 'has_major_sports', label: 'Require major-league sports', short: 'No major-league team', detail: '2026 clubs playing home games in metro · NFL / NBA / MLB / NHL / MLS / WNBA' },
-  { key: 'has_top_100_university', label: 'Require a top-100 university', short: 'No top-100 university', detail: '2027 U.S. News National Universities, metro campus' }
+  {
+    key: 'has_major_sports_team', label: 'Require major-league sports',
+    short: 'No major-league team',
+    detail: '2026 home-venue snapshot: NFL / NBA / MLB / NHL / MLS / WNBA'
+  },
+  {
+    key: 'has_top_100_university', label: 'Require a top-100 university',
+    short: 'No top-100 university',
+    detail: 'Not yet sourced; disabled until the full list is verified'
+  }
 ];
-const BASE_METROS = window.CITY_METROS;
-if (!Array.isArray(BASE_METROS) || BASE_METROS.length !== 100) {
-  throw new Error('Expected 100 metropolitan areas in metros.js');
-}
 
-const NUMERIC_KEYS = METRICS.map(m => m.key).filter(k => k !== 'population_2025');
-const BOOLEAN_KEYS = BINARY.map(b => b.key);
-const ALL_EXTRA_KEYS = [...NUMERIC_KEYS, ...BOOLEAN_KEYS];
-const STORE_KEY = 'digital-lab.city-eliminator.v2';
-
+const STORE_KEY = 'digital-lab.city-eliminator.master.v1';
 const state = {
+  metros: [],
   percentages: Object.fromEntries(METRICS.map(m => [m.key, 0])),
   required: Object.fromEntries(BINARY.map(b => [b.key, false])),
   view: 'survivors',
   query: '',
-  sort: 'rank',
-  imported: null,
-  growthSource: null
+  sort: 'rank'
 };
+const $ = id => document.getElementById(id);
+const escapeHtml = text => String(text).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function saveState() {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({
-      percentages: state.percentages,
-      required: state.required,
-      imported: state.imported,
-      growthSource: state.growthSource
-    }));
-  } catch (_) { /* Works without browser storage (private mode / storage unavailable). */ }
-}
 function restoreState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (!saved) return;
-    for (const m of METRICS) {
-      const v = Number(saved.percentages?.[m.key]);
-      if (Number.isFinite(v)) state.percentages[m.key] = Math.min(100, Math.max(0, 5 * Math.round(v / 5)));
+    for (const metric of METRICS) {
+      const value = Number(saved.percentages?.[metric.key]);
+      if (Number.isFinite(value)) state.percentages[metric.key] = Math.max(0, Math.min(100, Math.round(value / 5) * 5));
     }
-    for (const b of BINARY) state.required[b.key] = saved.required?.[b.key] === true;
-    if (saved.imported && typeof saved.imported === 'object') state.imported = saved.imported;
-    if (['census-2025','custom-csv'].includes(saved.growthSource)) state.growthSource = saved.growthSource;
-  } catch (_) { /* A broken old setting should not break the page. */ }
+    for (const binary of BINARY) state.required[binary.key] = saved.required?.[binary.key] === true;
+  } catch (_) { /* A corrupt or unavailable preference store doesn't break the app. */ }
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({percentages: state.percentages, required: state.required}));
+  } catch (_) { /* Local preferences are optional. */ }
 }
 
-const $ = id => document.getElementById(id);
-const html = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-
-function getMetros() {
-  return BASE_METROS.map(metro => ({
-    ...metro,
-    ...(state.imported?.[metro.rank] || {}),
-    has_major_sports: window.METRO_SPORTS_RANKS.has(metro.rank)
-  }));
+// A small CSV parser that supports commas and escaped quotes inside quoted fields.
+function parseCSV(text) {
+  const rows = []; let row = [], field = '', quoted = false;
+  const source = text.replace(/^\uFEFF/, '');
+  for (let i = 0; i < source.length; i++) {
+    const char = source[i];
+    if (char === '"') {
+      if (quoted && source[i + 1] === '"') { field += '"'; i++; }
+      else quoted = !quoted;
+    } else if (char === ',' && !quoted) { row.push(field); field = ''; }
+    else if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && source[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.some(v => v.trim())) rows.push(row);
+      row = [];
+    } else { field += char; }
+  }
+  if (quoted) throw new Error('There is an unclosed quote in the master CSV.');
+  row.push(field);
+  if (row.some(v => v.trim())) rows.push(row);
+  return rows;
 }
-function isValid(metro, key) {
-  return (key === 'has_major_sports' || key === 'has_top_100_university')
-    ? typeof metro[key] === 'boolean'
-    : typeof metro[key] === 'number' && Number.isFinite(metro[key]);
+function numberOrNull(text, column, name) {
+  const value = String(text ?? '').trim();
+  if (value === '') return null;
+  const result = Number(value.replace(/,/g, ''));
+  if (!Number.isFinite(result)) throw new Error(`Invalid ${column} value for ${name}`);
+  return result;
 }
-function getCoverage(metros, key) {
-  return metros.filter(m => isValid(m, key)).length;
+function boolOrNull(text, column, name) {
+  const value = String(text ?? '').trim().toLowerCase();
+  if (value === '') return null;
+  if (['true', 'yes', '1'].includes(value)) return true;
+  if (['false', 'no', '0'].includes(value)) return false;
+  throw new Error(`Invalid ${column} value for ${name}; use TRUE or FALSE.`);
+}
+function parseMasterCSV(text) {
+  const raw = parseCSV(text);
+  if (raw.length < 2) throw new Error('The master CSV is empty.');
+  const columns = raw[0].map(s => s.trim());
+  const required = ['cbsa_code', 'metro_name', 'population_rank_2025', 'population_2025'];
+  for (const col of required) if (!columns.includes(col)) throw new Error(`Missing CSV column: ${col}`);
+  const rankSet = new Set(), codeSet = new Set();
+  const metros = raw.slice(1).map(cells => {
+    const source = Object.fromEntries(columns.map((col, i) => [col, (cells[i] ?? '').trim()]));
+    const rank = numberOrNull(source.population_rank_2025, 'population_rank_2025', source.metro_name);
+    const population = numberOrNull(source.population_2025, 'population_2025', source.metro_name);
+    const cbsa = source.cbsa_code;
+    if (!Number.isInteger(rank) || rank < 1 || rank > 100) throw new Error(`Invalid population rank for ${source.metro_name}`);
+    if (!Number.isSafeInteger(population) || population <= 0) throw new Error(`Invalid population for ${source.metro_name}`);
+    if (!cbsa || rankSet.has(rank) || codeSet.has(cbsa)) throw new Error(`Duplicate or missing rank/CBSA: ${source.metro_name}`);
+    rankSet.add(rank); codeSet.add(cbsa);
+    const metro = {rank, metro: source.metro_name, cbsa_code: cbsa, population_2025: population};
+    for (const metric of METRICS) {
+      if (metric.key === 'population_2025') continue;
+      metro[metric.key] = numberOrNull(source[metric.key], metric.key, metro.metro);
+    }
+    for (const binary of BINARY) metro[binary.key] = boolOrNull(source[binary.key], binary.key, metro.metro);
+    return metro;
+  });
+  if (metros.length !== 100 || rankSet.size !== 100) {
+    throw new Error(`The master CSV must have exactly 100 unique metros (found ${metros.length}).`);
+  }
+  return metros.sort((a, b) => a.rank - b.rank);
 }
 
 function createControls() {
-  $('numeric-filters').innerHTML = METRICS.map(m => `
-    <div class="filter" data-filter="${m.key}">
+  $('numeric-filters').innerHTML = METRICS.map(metric => `
+    <div class="filter" data-filter="${metric.key}">
       <div class="filter-title-row">
-        <label for="slider-${m.key}">${html(m.label)}</label>
-        <output class="filter-output" id="value-${m.key}" for="slider-${m.key}">0%</output>
+        <label for="slider-${metric.key}">${escapeHtml(metric.label)}</label>
+        <output class="filter-output" id="value-${metric.key}" for="slider-${metric.key}">0%</output>
       </div>
-      <p class="filter-detail">${html(m.detail)}</p>
-      <input id="slider-${m.key}" type="range" min="0" max="100" step="5" value="0"
-             aria-label="Eliminate bottom percentage by ${html(m.label)}" />
+      <p class="filter-detail">${escapeHtml(metric.detail)}</p>
+      <input id="slider-${metric.key}" type="range" min="0" max="100" step="5" value="0"
+             aria-label="Eliminate bottom percentage by ${escapeHtml(metric.label)}" />
       <div class="scale-ends"><span>Keep all</span><span>Remove bottom 100%</span></div>
-      <span class="filter-lock" id="lock-${m.key}" hidden>Loading data…</span>
+      <span class="filter-lock" id="lock-${metric.key}" hidden>Loading data…</span>
     </div>
   `).join('');
-  $('binary-filters').innerHTML = BINARY.map(b => `
+  $('binary-filters').innerHTML = BINARY.map(binary => `
     <div class="binary-toggle">
-      <div><label for="toggle-${b.key}">${html(b.label)}</label><small>${html(b.detail)}</small>
-      <span class="filter-lock" id="lock-${b.key}" hidden>Missing data</span></div>
-      <input id="toggle-${b.key}" type="checkbox" />
+      <div>
+        <label for="toggle-${binary.key}">${escapeHtml(binary.label)}</label>
+        <small>${escapeHtml(binary.detail)}</small>
+        <span class="filter-lock" id="lock-${binary.key}" hidden>Missing data</span>
+      </div>
+      <input id="toggle-${binary.key}" type="checkbox" />
     </div>
   `).join('');
-  for (const m of METRICS) {
-    $(`slider-${m.key}`).addEventListener('input', e => {
-      state.percentages[m.key] = Number(e.target.value);
+  for (const metric of METRICS) {
+    $(`slider-${metric.key}`).addEventListener('input', event => {
+      state.percentages[metric.key] = Number(event.target.value);
       saveState(); render();
     });
   }
-  for (const b of BINARY) {
-    $(`toggle-${b.key}`).addEventListener('change', e => {
-      state.required[b.key] = e.target.checked;
+  for (const binary of BINARY) {
+    $(`toggle-${binary.key}`).addEventListener('change', event => {
+      state.required[binary.key] = event.target.checked;
       saveState(); render();
     });
   }
 }
 
-// Important algorithm: rank each metric across the ORIGINAL 100, then
-// eliminate the bottom floor(percentage × 100) for that metric.
+function isValid(metro, key) {
+  return BINARY.some(b => b.key === key) ? typeof metro[key] === 'boolean' :
+    typeof metro[key] === 'number' && Number.isFinite(metro[key]);
+}
+function coverage(metros, key) { return metros.filter(metro => isValid(metro, key)).length; }
+
+// Each metric removes its bottom X% of the ORIGINAL 100, not the current survivors.
 function getEliminations(metros) {
-  const byRank = new Map(metros.map(m => [m.rank, []]));
+  const reasons = new Map(metros.map(metro => [metro.rank, []]));
   for (const metric of METRICS) {
-    const pct = state.percentages[metric.key];
-    if (!pct || getCoverage(metros, metric.key) !== metros.length) continue;
-    const sortedWorstFirst = [...metros].sort((a, b) => {
-      const diff = metric.higherBetter ? a[metric.key] - b[metric.key] : b[metric.key] - a[metric.key];
-      return diff || a.rank - b.rank; // deterministic tie-breaker
+    const percent = state.percentages[metric.key];
+    const scored = metros.filter(m => isValid(m, metric.key));
+if (!percent || scored.length === 0) continue;
+if (metric.key !== "walkability_score" && scored.length !== 100) continue;
+const sortedWorstFirst = [...scored].sort((a, b) => {
+      const difference = metric.higherBetter ? a[metric.key] - b[metric.key] : b[metric.key] - a[metric.key];
+      return difference || a.rank - b.rank;
     });
-    const count = Math.floor(metros.length * pct / 100);
-    for (const metro of sortedWorstFirst.slice(0, count)) {
-      byRank.get(metro.rank).push(`${metric.short} · bottom ${pct}%`);
+    const removeCount = Math.floor(sortedWorstFirst.length * percent / 100);
+    for (const metro of sortedWorstFirst.slice(0, removeCount)) {
+      reasons.get(metro.rank).push(`${metric.short} · bottom ${percent}%`);
     }
   }
   for (const binary of BINARY) {
-    if (!state.required[binary.key] || getCoverage(metros, binary.key) !== metros.length) continue;
+    if (!state.required[binary.key] || coverage(metros, binary.key) !== 100) continue;
     for (const metro of metros) {
-      if (metro[binary.key] === false) byRank.get(metro.rank).push(binary.short);
+      if (metro[binary.key] === false) reasons.get(metro.rank).push(binary.short);
     }
   }
-  return byRank;
+  return reasons;
 }
 
 function render() {
-  const metros = getMetros();
+  const metros = state.metros;
+  if (!metros.length) return;
   for (const metric of METRICS) {
-    const coverage = getCoverage(metros, metric.key);
-    const enabled = coverage === metros.length;
+    const count = coverage(metros, metric.key);
+    const enabled = count === 100;
+      (metric.key === "walkability_score" && count > 0);
     const slider = $(`slider-${metric.key}`);
     slider.disabled = !enabled;
     if (!enabled) state.percentages[metric.key] = 0;
-    slider.value = String(state.percentages[metric.key]);
+    slider.value = state.percentages[metric.key];
     $(`value-${metric.key}`).textContent = `${state.percentages[metric.key]}%`;
     const lock = $(`lock-${metric.key}`);
     lock.hidden = enabled;
-    if (!enabled) lock.textContent = `Data required: ${coverage}/100 scored`;
+    if (!enabled) lock.textContent = `Incomplete data: ${count}/100 metros scored`;
   }
   for (const binary of BINARY) {
-    const coverage = getCoverage(metros, binary.key);
-    const enabled = coverage === metros.length;
-    const box = $(`toggle-${binary.key}`);
-    box.disabled = !enabled;
+    const count = coverage(metros, binary.key);
+    const enabled = count === 100;
+    const toggle = $(`toggle-${binary.key}`);
+    toggle.disabled = !enabled;
     if (!enabled) state.required[binary.key] = false;
-    box.checked = state.required[binary.key];
+    toggle.checked = state.required[binary.key];
     const lock = $(`lock-${binary.key}`);
     lock.hidden = enabled;
-    if (!enabled) lock.textContent = `Data required: ${coverage}/100 scored`;
+    if (!enabled) lock.textContent = `Incomplete data: ${count}/100 metros scored`;
   }
+  const availableMetrics = METRICS.filter(m => coverage(metros, m.key) === 100);
+  const availableBinary = BINARY.filter(b => coverage(metros, b.key) === 100);
+  $('data-mode-label').textContent = 'Master CSV · 100 metros';
+  $('mode-title').textContent = 'Master dataset loaded';
+  $('mode-description').textContent = `Ready: ${[...availableMetrics.map(m => m.short), ...availableBinary.map(b => b.label.replace('Require ', ''))].join(', ')}. Incomplete criteria remain disabled. Weather is modeled; walkability covers downtown, not the full metro.`;
 
-  const growthCount = getCoverage(metros, 'annual_growth_pct');
-  const officialGrowth = growthCount === 100 && state.growthSource === 'census-2025';
-  const customGrowth = growthCount === 100 && !officialGrowth;
-  const realExtra = [
-    ['good_weather_days', 'historical weather'],
-    ['walk_score', 'EPA walkability']
-  ].filter(([key]) => getCoverage(metros, key) === 100).map(([,name]) => name);
-  $('data-mode-label').textContent = ['Census 2025 population', '2026 sports',
-    ...(officialGrowth ? ['Census growth'] : []), ...realExtra].join(' · ');
-  $('mode-title').textContent = realExtra.length
-    ? `${realExtra.join(' + ')} ready`
-    : officialGrowth ? 'Official Census growth data loaded'
-    : customGrowth ? 'Custom growth data loaded — check provenance'
-    : 'Real-data mode — population and major sports ready';
-  $('mode-description').textContent = [
-    officialGrowth ? 'Official 2024–2025 metro population growth is loaded.' :
-    customGrowth ? 'Growth values came from a custom CSV, not the official Census importer.' :
-      'Download and import the official Census CSV to enable population growth.',
-    realExtra.length ? `Also loaded: ${realExtra.join(' and ')}.` :
-      'Use the real-data generator to build the weather and walkability CSVs.',
-    'Other criteria activate only after 100 verified metro records are available.'
-  ].join(' ');
-  const eliminated = getEliminations(metros);
-  const survivors = metros.filter(m => eliminated.get(m.rank).length === 0);
-  const excluded = metros.filter(m => eliminated.get(m.rank).length !== 0);
+  const reasons = getEliminations(metros);
+  const survivors = metros.filter(metro => !reasons.get(metro.rank).length);
+  const eliminated = metros.filter(metro => reasons.get(metro.rank).length);
   const active = METRICS.filter(m => state.percentages[m.key] > 0).length + BINARY.filter(b => state.required[b.key]).length;
+  $('initial-count').textContent = metros.length;
   $('survivor-count').textContent = survivors.length;
-  $('eliminated-count').textContent = excluded.length;
+  $('eliminated-count').textContent = eliminated.length;
   $('active-count').textContent = active;
   $('survivor-percent').textContent = `${survivors.length}% of starting field`;
   $('survival-fill').style.width = `${survivors.length}%`;
   $('survivors-tab-count').textContent = survivors.length;
-  $('eliminated-tab-count').textContent = excluded.length;
+  $('eliminated-tab-count').textContent = eliminated.length;
   $('results-title').textContent = state.view === 'survivors' ? 'Remaining metros' : 'Eliminated metros';
   for (const tab of document.querySelectorAll('[data-view]')) {
-    const current = tab.dataset.view === state.view;
-    tab.classList.toggle('active', current);
-    tab.setAttribute('aria-pressed', String(current));
+    const selected = tab.dataset.view === state.view;
+    tab.classList.toggle('active', selected);
+    tab.setAttribute('aria-pressed', String(selected));
   }
-  const sorted = [...(state.view === 'survivors' ? survivors : excluded)]
+  const filtered = [...(state.view === 'survivors' ? survivors : eliminated)]
     .filter(m => m.metro.toLowerCase().includes(state.query.toLowerCase()))
-    .sort((a,b) => state.sort === 'name' ? a.metro.localeCompare(b.metro) : a.rank - b.rank);
-  $('metro-results').innerHTML = sorted.map(m => `
+    .sort((a, b) => state.sort === 'name' ? a.metro.localeCompare(b.metro) : a.rank - b.rank);
+  $('metro-results').innerHTML = filtered.map(metro => `
     <li class="metro-row">
-      <div class="metro-primary"><span class="metro-rank">#${m.rank}</span><div>
-        <div class="metro-name">${html(m.metro)}</div>
-        ${state.view === 'eliminated' ? `<div class="metro-reason">${eliminated.get(m.rank).map(reason => `<span class="reason-pill">${html(reason)}</span>`).join('')}</div>` : ''}
+      <div class="metro-primary"><span class="metro-rank">#${metro.rank}</span><div>
+        <div class="metro-name">${escapeHtml(metro.metro)}</div>
+        ${state.view === 'eliminated' ? `<div class="metro-reason">${reasons.get(metro.rank).map(reason => `<span class="reason-pill">${escapeHtml(reason)}</span>`).join('')}</div>` : ''}
       </div></div>
-      <span class="metro-pop">${m.population_2025.toLocaleString()}</span>
+      <span class="metro-pop">${metro.population_2025.toLocaleString()}</span>
     </li>
   `).join('');
-  $('no-results').hidden = sorted.length > 0;
-  $('showing-count').textContent = `Showing ${sorted.length} of ${state.view === 'survivors' ? survivors.length : excluded.length} metros`;
+  $('no-results').hidden = filtered.length !== 0;
+  $('showing-count').textContent = `Showing ${filtered.length} of ${state.view === 'survivors' ? survivors.length : eliminated.length} metros`;
   saveState();
 }
 
-// Parses Excel-compatible CSV, including quoted cells containing commas.
-function parseCSV(text) {
-  const lines = []; let row = []; let field = ''; let quoted = false;
-  for (let i=0; i<text.length; i++) {
-    const char = text[i];
-    if (char === '"') {
-      if (quoted && text[i+1] === '"') { field += '"'; i++; }
-      else quoted = !quoted;
-    } else if (char === ',' && !quoted) { row.push(field); field=''; }
-    else if ((char === '\n' || char === '\r') && !quoted) {
-      if (char === '\r' && text[i+1] === '\n') i++;
-      row.push(field); field='';
-      if (row.some(c => c.trim())) lines.push(row);
-      row=[];
-    } else field += char;
-  }
-  if (quoted) throw new Error('Unclosed quotation mark in CSV');
-  row.push(field); if (row.some(c => c.trim())) lines.push(row);
-  return lines;
-}
-function parseImportedMetrics(text) {
-  const rows = parseCSV(text.replace(/^\uFEFF/, ''));
-  if (rows.length < 2) throw new Error('CSV is empty');
-  const headers = rows[0].map(x => x.trim());
-  if (!headers.includes('rank') || !headers.includes('metro')) throw new Error('CSV needs rank and metro columns');
-  const byRank = {};
-  for (const cells of rows.slice(1)) {
-    const obj = Object.fromEntries(headers.map((h,i) => [h, (cells[i] || '').trim()]));
-    const rank = Number(obj.rank);
-    const base = BASE_METROS.find(m => m.rank === rank);
-    if (!base) throw new Error(`Invalid metro rank: ${obj.rank}`);
-    if (base.metro !== obj.metro) throw new Error(`Metro name differs from rank #${rank}: ${obj.metro}`);
-    if (byRank[rank]) throw new Error(`Duplicate metro rank: ${rank}`);
-    const metrics = {};
-    for (const key of NUMERIC_KEYS) {
-      if (obj[key] === '' || obj[key] === undefined) continue;
-      const numeric = Number(obj[key].replace(/[$,%]/g,''));
-      if (!Number.isFinite(numeric)) throw new Error(`Invalid ${key} for rank #${rank}`);
-      metrics[key] = numeric;
-    }
-    for (const key of BOOLEAN_KEYS) {
-      const raw = (obj[key] || '').toLowerCase();
-      if (!raw) continue;
-      if (['1','yes','true'].includes(raw)) metrics[key] = true;
-      else if (['0','no','false'].includes(raw)) metrics[key] = false;
-      else throw new Error(`Invalid yes/no for ${key} at rank #${rank}`);
-    }
-    byRank[rank] = metrics;
-  }
-  return byRank;
-}
-// Accepts the raw CSV published by the U.S. Census Bureau, NOT a hand-filled template.
-// Match metro records by their verified 2025 populations, which remain identical
-// in metros.js. County, metropolitan-division and micropolitan rows are excluded.
-function parseCensusGrowth(text) {
-  const rows = parseCSV(text.replace(/^\uFEFF/, ''));
-  if (!rows.length) throw new Error('The Census CSV is empty');
-  const headers = rows[0].map(s => s.trim().toUpperCase());
-  const fields = ['LSAD', 'NAME', 'POPESTIMATE2024', 'POPESTIMATE2025'];
-  for (const field of fields) if (!headers.includes(field)) {
-    throw new Error(`This is not the Census CBSA-EST2025-ALLDATA file (missing ${field})`);
-  }
-  const col = Object.fromEntries(fields.map(f => [f, headers.indexOf(f)]));
-  const byPop = new Map(BASE_METROS.map(m => [m.population_2025, m]));
-  const byRank = {};
-  const matched = new Map();
-  for (const cells of rows.slice(1)) {
-    const lsad = (cells[col.LSAD] || '').trim().toLowerCase();
-    // Official field uses 'Metropolitan Statistical Area'; reject county/division rows.
-    if (!lsad.includes('metropolitan statistical area') || lsad.includes('micropolitan')) continue;
-    const p24 = Number((cells[col.POPESTIMATE2024] || '').replace(/,/g, ''));
-    const p25 = Number((cells[col.POPESTIMATE2025] || '').replace(/,/g, ''));
-    if (!Number.isSafeInteger(p25) || !Number.isSafeInteger(p24) || p24 <= 0) continue;
-    const base = byPop.get(p25);
-    if (!base) continue;
-    // Cross-check that the metro name begins with the correct principal city.
-    const baseCity = base.metro.split('-')[0].split(',')[0].toLowerCase();
-    const censusName = (cells[col.NAME] || '').trim().toLowerCase();
-    if (!censusName.startsWith(baseCity)) continue;
-    if (matched.has(base.rank)) throw new Error(`Duplicate Census row for ${base.metro}`);
-    matched.set(base.rank, censusName);
-    byRank[base.rank] = { annual_growth_pct: Number((((p25 - p24) / p24) * 100).toFixed(5)) };
-  }
-  if (Object.keys(byRank).length !== BASE_METROS.length) {
-    const missing = BASE_METROS.filter(m => !byRank[m.rank]).map(m => m.metro);
-    throw new Error(`Matched ${Object.keys(byRank).length}/100 metros. Missing: ${missing.slice(0, 5).join('; ')}${missing.length > 5 ? '…' : ''}. Check that you downloaded the official Vintage 2025 file.`);
-  }
-  return byRank;
-}
-// Merge new data rather than erasing a previous import (e.g. ACS later).
-function mergeMetrics(a, b) {
-  const result = { ...(a || {}) };
-  for (const [rank, values] of Object.entries(b)) {
-    result[rank] = { ...(result[rank] || {}), ...values };
-  }
-  return result;
-}
 function csvEscape(value) {
-  const str=String(value ?? '');
-  return /[",\n\r]/.test(str) ? `"${str.replace(/"/g,'""')}"` : str;
+  const text = String(value ?? '');
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 function exportSurvivors() {
-  const metros=getMetros();
-  const eliminated=getEliminations(metros);
-  const survivors=metros.filter(m => eliminated.get(m.rank).length===0);
-  const columns=['rank','metro','population_2025',...ALL_EXTRA_KEYS];
-  const rows=[columns.join(','),...survivors.map(m => columns.map(k => csvEscape(m[k])).join(','))];
-  const blob=new Blob([rows.join('\r\n')],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a');
-  a.href=url; a.download='city-eliminator-survivors.csv'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url),100);
+  if (!state.metros.length) return;
+  const reasons = getEliminations(state.metros);
+  const survivors = state.metros.filter(metro => !reasons.get(metro.rank).length);
+  const columns = ['cbsa_code','metro','rank','population_2025',...METRICS.filter(m => m.key !== 'population_2025').map(m => m.key),...BINARY.map(b => b.key)];
+  const lines = [columns.join(','), ...survivors.map(metro => columns.map(key => csvEscape(metro[key])).join(','))];
+  const blob = new Blob([lines.join('\r\n')], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url; anchor.download = 'city-eliminator-survivors.csv';
+  document.body.appendChild(anchor); anchor.click(); anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
+async function loadMasterData() {
+  try {
+    const response = await fetch('city-data-master.csv', {cache: 'no-store'});
+    if (!response.ok) throw new Error(`HTTP ${response.status} — city-data-master.csv not found`);
+    state.metros = parseMasterCSV(await response.text());
+    render();
+  } catch (error) {
+    console.error('City Eliminator dataset error:', error);
+    $('data-mode-label').textContent = 'Master CSV unavailable';
+    $('mode-title').textContent = 'Could not load city-data-master.csv';
+    $('mode-description').textContent = `${error.message}. Check that the CSV is beside city-game.html and test through Netlify or a local development server (not by opening file:// directly).`;
+    $('metro-results').innerHTML = '';
+    $('showing-count').textContent = 'No city data loaded';
+    for (const metric of METRICS) $(`slider-${metric.key}`).disabled = true;
+    for (const binary of BINARY) $(`toggle-${binary.key}`).disabled = true;
+  }
+}
 function main() {
-  restoreState(); createControls();
+  restoreState();
+  createControls();
+  for (const metric of METRICS) $(`slider-${metric.key}`).disabled = true;
+  for (const binary of BINARY) $(`toggle-${binary.key}`).disabled = true;
   $('reset-button').addEventListener('click', () => {
-    for (const m of METRICS) state.percentages[m.key]=0;
-    for (const b of BINARY) state.required[b.key]=false;
-    state.query=''; $('city-search').value=''; state.view='survivors'; render();
+    for (const metric of METRICS) state.percentages[metric.key] = 0;
+    for (const binary of BINARY) state.required[binary.key] = false;
+    state.query = ''; $('city-search').value = '';
+    state.view = 'survivors';
+    render();
   });
   $('export-button').addEventListener('click', exportSurvivors);
-  $('city-search').addEventListener('input', e => { state.query=e.target.value; render(); });
-  $('sort-metros').addEventListener('change', e => { state.sort=e.target.value; render(); });
+  $('city-search').addEventListener('input', event => {state.query = event.target.value; render();});
+  $('sort-metros').addEventListener('change', event => {state.sort = event.target.value; render();});
   for (const tab of document.querySelectorAll('[data-view]')) {
-    tab.addEventListener('click', () => { state.view=tab.dataset.view; render(); });
+    tab.addEventListener('click', () => {state.view = tab.dataset.view; render();});
   }
-  $('csv-file').addEventListener('change', async e => {
-    const file=e.target.files?.[0]; if (!file) return;
-    try {
-      const imported=parseImportedMetrics(await file.text());
-      state.imported=mergeMetrics(state.imported, imported);
-      if (Object.values(imported).some(values => Number.isFinite(values.annual_growth_pct))) state.growthSource = 'custom-csv';
-      render();
-      const complete=ALL_EXTRA_KEYS.filter(k => getCoverage(getMetros(),k)===100);
-      window.alert(`Imported ${Object.keys(imported).length} metro rows. Fully populated criteria: ${complete.length} of ${ALL_EXTRA_KEYS.length}.`);
-    } catch (error) { window.alert(`CSV import failed: ${error.message}`); }
-    e.target.value='';
-  });
-  $('census-file').addEventListener('change', async event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const growth = parseCensusGrowth(await file.text());
-      state.imported = mergeMetrics(state.imported, growth);
-      state.growthSource = 'census-2025';
-      render();
-      window.alert('Success! Loaded official 2024–2025 population growth for all 100 metros. The growth slider is now active.');
-    } catch (error) {
-      window.alert('Census import failed: ' + error.message);
-    }
-    event.target.value = '';
-  });
-  // Deployers can place Census file in project root once; all site visitors get it.
-  // Using a local path also avoids cross-origin browser restrictions.
-  fetch('census-metro-2025.csv', { cache: 'no-cache' })
-    .then(response => {
-      if (!response.ok) throw new Error('No bundled Census CSV');
-      return response.text();
-    })
-    .then(text => {
-      state.imported = mergeMetrics(state.imported, parseCensusGrowth(text));
-      state.growthSource = 'census-2025';
-      render();
-    })
-    .catch(() => { /* Still works with just population/sports or manual file upload. */ });
-  // Extra, independently sourced metric CSVs are optional. Deploy them once
-  // alongside this page; they then activate for every site visitor.
-  for (const filename of ['city-good-weather-days.csv', 'city-walkability.csv']) {
-    fetch(filename, { cache: 'no-cache' })
-      .then(response => {
-        if (!response.ok) throw new Error('Optional CSV not deployed');
-        return response.text();
-      })
-      .then(text => {
-        const values = parseImportedMetrics(text);
-        if (Object.keys(values).length !== BASE_METROS.length) throw new Error('Dataset must contain exactly 100 metros');
-        state.imported = mergeMetrics(state.imported, values);
-        render();
-      })
-      .catch(error => { console.info(filename + ': not loaded (' + error.message + ')'); });
-  }
-  render();
+  loadMasterData();
 }
 main();
