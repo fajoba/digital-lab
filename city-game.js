@@ -1,6 +1,6 @@
 /* Digital Lab — City Eliminator
  * Reads one published data file: city-data-master.csv
- * Every slider ranks all 100 ORIGINAL metros. Filters combine by intersection.
+ * Sliders rank the original scored metros. Filters combine by intersection.
  * Data preparation and source attribution live outside this browser script.
  */
 
@@ -12,7 +12,8 @@ const METRICS = [
   },
   {
     key: 'walkability_score', label: 'Downtown walkability', short: 'Walkability',
-    detail: 'Downtown walkability · unscored metros are retained',
+    detail: 'CityViking downtown index · removes the bottom percentage of scored metros; unscored metros are retained',
+    allowPartial: true,
     format: n => Number(n).toFixed(1), higherBetter: true
   },
   {
@@ -193,16 +194,18 @@ function isValid(metro, key) {
     typeof metro[key] === 'number' && Number.isFinite(metro[key]);
 }
 function coverage(metros, key) { return metros.filter(metro => isValid(metro, key)).length; }
+function metricEnabled(metric, count) {
+  return count === 100 || (metric.allowPartial === true && count > 0);
+}
 
-// Each metric removes its bottom X% of the ORIGINAL 100, not the current survivors.
+// Each metric removes its bottom X% of the original scored field, not the current survivors.
 function getEliminations(metros) {
   const reasons = new Map(metros.map(metro => [metro.rank, []]));
   for (const metric of METRICS) {
     const percent = state.percentages[metric.key];
     const scored = metros.filter(m => isValid(m, metric.key));
-if (!percent || scored.length === 0) continue;
-if (metric.key !== "walkability_score" && scored.length !== 100) continue;
-const sortedWorstFirst = [...scored].sort((a, b) => {
+    if (!percent || !metricEnabled(metric, scored.length)) continue;
+    const sortedWorstFirst = [...scored].sort((a, b) => {
       const difference = metric.higherBetter ? a[metric.key] - b[metric.key] : b[metric.key] - a[metric.key];
       return difference || a.rank - b.rank;
     });
@@ -225,15 +228,15 @@ function render() {
   if (!metros.length) return;
   for (const metric of METRICS) {
     const count = coverage(metros, metric.key);
-    const enabled = count === 100;
-      (metric.key === "walkability_score" && count > 0);
+    const enabled = metricEnabled(metric, count);
     const slider = $(`slider-${metric.key}`);
     slider.disabled = !enabled;
     if (!enabled) state.percentages[metric.key] = 0;
     slider.value = state.percentages[metric.key];
     $(`value-${metric.key}`).textContent = `${state.percentages[metric.key]}%`;
     const lock = $(`lock-${metric.key}`);
-    lock.hidden = enabled;
+    lock.hidden = enabled && count === 100;
+    if (enabled && count < 100) lock.textContent = `${count}/100 metros scored · unscored metros retained`;
     if (!enabled) lock.textContent = `Incomplete data: ${count}/100 metros scored`;
   }
   for (const binary of BINARY) {
@@ -247,11 +250,11 @@ function render() {
     lock.hidden = enabled;
     if (!enabled) lock.textContent = `Incomplete data: ${count}/100 metros scored`;
   }
-  const availableMetrics = METRICS.filter(m => coverage(metros, m.key) === 100);
+  const availableMetrics = METRICS.filter(m => metricEnabled(m, coverage(metros, m.key)));
   const availableBinary = BINARY.filter(b => coverage(metros, b.key) === 100);
   $('data-mode-label').textContent = 'Master CSV · 100 metros';
   $('mode-title').textContent = 'Master dataset loaded';
-  $('mode-description').textContent = `Ready: ${[...availableMetrics.map(m => m.short), ...availableBinary.map(b => b.label.replace('Require ', ''))].join(', ')}. Incomplete criteria remain disabled. Weather is modeled; walkability covers downtown, not the full metro.`;
+  $('mode-description').textContent = `Ready: ${[...availableMetrics.map(m => m.short), ...availableBinary.map(b => b.label.replace('Require ', ''))].join(', ')}. Other incomplete criteria remain disabled. Weather is modeled; walkability filters scored downtowns and retains unscored metros.`;
 
   const reasons = getEliminations(metros);
   const survivors = metros.filter(metro => !reasons.get(metro.rank).length);

@@ -47,7 +47,7 @@
           <div><p class="eyebrow">YOUR RULES</p><h2 id="filters-title">Elimination filters</h2></div>
           <button id="reset-button" class="link-button" type="button">Reset filters</button>
         </div>
-        <p class="subhead">A 25% slider removes the bottom 25 <em>of the original 100</em> on that metric. Filters combine: failing any active criterion eliminates a metro.</p>
+        <p class="subhead">A 25% slider removes the bottom 25 <em>of the original 100</em> on a fully scored metric. Walkability removes the bottom 25% of scored metros, keeping unscored metros. Filters combine: failing any active criterion eliminates a metro.</p>
         <div id="numeric-filters" class="filter-stack"></div>
         <div class="binary-section">
           <p class="eyebrow">YES / NO FILTERS</p>
@@ -55,7 +55,7 @@
         </div>
         <div class="panel-footnote">
           <strong>About the data</strong>
-          <p>Every filter reads <code>city-data-master.csv</code>. Population and growth use Census 2025 estimates; weather days are approximate modeled values (not observed daily counts). Walkability is CityViking's downtown index, currently available for 64 of 100 metros, so that slider stays disabled until coverage is complete. Other criteria are disabled when their columns are incomplete.</p>
+          <p>Every filter reads <code>city-data-master.csv</code>. Population and growth use Census 2025 estimates; weather days are approximate modeled values (not observed daily counts). Walkability is CityViking's downtown index, available for 64 of 100 metros. Its slider filters only those scored metros; the 36 unscored metros are retained. Other criteria are disabled when their columns are incomplete.</p>
           <a href="city-data-master.csv" download>Download master CSV ↓</a>
         </div>
       </section>
