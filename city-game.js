@@ -45,7 +45,7 @@ const METRICS = [
 
 const BINARY = [
   {
-    key: 'has_major_sports_team', label: 'Require major-league sports',
+    key: 'has_major_sports_team', label: 'Pro sports teams', slider: true,
     short: 'No major-league team',
     detail: '2026 home-venue snapshot: NFL / NBA / MLB / NHL / MLS / WNBA'
   },
@@ -165,7 +165,20 @@ function createControls() {
       <span class="filter-lock" id="lock-${metric.key}" hidden>Loading data…</span>
     </div>
   `).join('');
-  $('binary-filters').innerHTML = BINARY.map(binary => `
+  $('numeric-filters').insertAdjacentHTML('beforeend', BINARY.filter(binary => binary.slider).map(binary => `
+    <div class="filter" data-filter="${binary.key}">
+      <div class="filter-title-row">
+        <label for="toggle-${binary.key}">${escapeHtml(binary.label)}</label>
+        <output class="filter-output" id="value-${binary.key}" for="toggle-${binary.key}">Any metro</output>
+      </div>
+      <p class="filter-detail">${escapeHtml(binary.detail)} · require at least one team</p>
+      <input id="toggle-${binary.key}" type="range" min="0" max="1" step="1" value="0"
+             aria-label="Minimum pro sports teams" aria-valuetext="Any metro" />
+      <div class="scale-ends"><span>Any metro</span><span>At least one team</span></div>
+      <span class="filter-lock" id="lock-${binary.key}" hidden>Loading data…</span>
+    </div>
+  `).join(''));
+  $('binary-filters').innerHTML = BINARY.filter(binary => !binary.slider).map(binary => `
     <div class="binary-toggle">
       <div>
         <label for="toggle-${binary.key}">${escapeHtml(binary.label)}</label>
@@ -182,8 +195,8 @@ function createControls() {
     });
   }
   for (const binary of BINARY) {
-    $(`toggle-${binary.key}`).addEventListener('change', event => {
-      state.required[binary.key] = event.target.checked;
+    $(`toggle-${binary.key}`).addEventListener(binary.slider ? 'input' : 'change', event => {
+      state.required[binary.key] = binary.slider ? Number(event.target.value) === 1 : event.target.checked;
       saveState(); render();
     });
   }
@@ -245,7 +258,14 @@ function render() {
     const toggle = $(`toggle-${binary.key}`);
     toggle.disabled = !enabled;
     if (!enabled) state.required[binary.key] = false;
-    toggle.checked = state.required[binary.key];
+    if (binary.slider) {
+      toggle.value = state.required[binary.key] ? '1' : '0';
+      const label = state.required[binary.key] ? 'At least one team' : 'Any metro';
+      $(`value-${binary.key}`).textContent = label;
+      toggle.setAttribute('aria-valuetext', label);
+    } else {
+      toggle.checked = state.required[binary.key];
+    }
     const lock = $(`lock-${binary.key}`);
     lock.hidden = enabled;
     if (!enabled) lock.textContent = `Incomplete data: ${count}/100 metros scored`;
